@@ -13,7 +13,8 @@ import {
   Calendar,
   Clock,
   Menu,
-  Flame
+  Flame,
+  X
 } from 'lucide-react';
 import { User, NetworkMode, UserRole } from '@/lib/types';
 import { translations, Language } from '@/lib/translations';
@@ -116,16 +117,32 @@ export const Header: React.FC<HeaderProps> = ({
           </span>
         </div>
 
-        {/* Search */}
-        <div className="relative w-32 sm:w-56 md:w-64">
-          <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400" />
+        {/* Search Bar */}
+        <div className="relative flex items-center">
+          <div className="absolute left-3 flex items-center pointer-events-none text-slate-400">
+            <Search className="w-4 h-4 text-slate-400" />
+          </div>
           <input
             type="text"
             value={searchQuery}
             onChange={e => onSearchChange(e.target.value)}
-            placeholder={language === 'so' ? 'Raadi...' : 'Search...'}
-            className="input pl-8 sm:pl-9 h-8 sm:h-9 text-[11px] sm:text-[13px] rounded-xl"
+            placeholder={language === 'so' ? 'Raadi wax kasta...' : 'Search sales, tanks...'}
+            style={{
+              paddingLeft: '36px',
+              paddingRight: searchQuery ? '32px' : '12px'
+            }}
+            className="w-36 xs:w-44 sm:w-60 md:w-68 lg:w-72 h-9 bg-slate-50 hover:bg-slate-100/60 focus:bg-white text-slate-900 placeholder:text-slate-400 text-xs sm:text-[13px] font-medium rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15 focus:outline-none transition-all shadow-2xs"
           />
+          {searchQuery && (
+            <button
+              onClick={() => onSearchChange('')}
+              className="absolute right-2 p-1 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-200/60 transition-colors cursor-pointer"
+              title={language === 'so' ? 'Tirtir raadinta' : 'Clear search'}
+              aria-label="Clear search"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
       </div>
 
