@@ -76,40 +76,32 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       value: `$${totalSalesAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}`,
       trend: '+12%',
       icon: DollarSign,
-      gradient: 'linear-gradient(135deg, #F0FDF4, #DCFCE7)',
-      iconColor: '#16A34A',
-      iconBg: '#BBF7D0',
-      borderColor: '#BBF7D0'
+      iconColor: 'text-emerald-600',
+      iconBg: 'bg-emerald-50 border-emerald-100'
     },
     {
       label: t.fuelSoldLitres,
       value: `${totalLitresSold.toLocaleString('en-US', { minimumFractionDigits: 2 })} L`,
       trend: '+8%',
       icon: Droplet,
-      gradient: 'linear-gradient(135deg, #EFF6FF, #DBEAFE)',
-      iconColor: '#2563EB',
-      iconBg: '#BFDBFE',
-      borderColor: '#BFDBFE'
+      iconColor: 'text-blue-600',
+      iconBg: 'bg-blue-50 border-blue-100'
     },
     {
       label: t.cashInHand,
       value: `$${cashSales.toLocaleString('en-US', { minimumFractionDigits: 2 })}`,
       trend: '+5%',
       icon: Wallet,
-      gradient: 'linear-gradient(135deg, #F5F3FF, #EDE9FE)',
-      iconColor: '#7C3AED',
-      iconBg: '#DDD6FE',
-      borderColor: '#DDD6FE'
+      iconColor: 'text-purple-600',
+      iconBg: 'bg-purple-50 border-purple-100'
     },
     {
       label: t.totalTransactions,
       value: `${totalTransactions}`,
       trend: '+6%',
       icon: Receipt,
-      gradient: 'linear-gradient(135deg, #FFFBEB, #FEF3C7)',
-      iconColor: '#D97706',
-      iconBg: '#FDE68A',
-      borderColor: '#FDE68A'
+      iconColor: 'text-amber-600',
+      iconBg: 'bg-amber-50 border-amber-100'
     }
   ];
 
@@ -135,39 +127,33 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </button>
       </div>
 
-      {/* 4 KPI Cards */}
+      {/* 4 KPI Cards (Clean, Simple, White like Reports) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {kpis.map((kpi, i) => {
           const Icon = kpi.icon;
           return (
             <div
               key={i}
-              className="p-5 rounded-2xl flex flex-col justify-between glass-card-hover"
-              style={{
-                background: kpi.gradient,
-                border: `1px solid ${kpi.borderColor}`,
-                borderRadius: 16
-              }}
+              className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs hover:border-slate-300 hover:shadow-sm transition-all flex flex-col justify-between"
             >
               <div className="flex items-start justify-between">
                 <div>
-                  <div className="text-[11px] font-bold uppercase tracking-wider mb-2" style={{ color: '#64748B' }}>
+                  <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
                     {kpi.label}
                   </div>
-                  <div className="text-[22px] font-black tracking-tight" style={{ color: '#0F172A' }}>
+                  <div className="text-[22px] font-black tracking-tight text-slate-900">
                     {kpi.value}
                   </div>
                 </div>
                 <div
-                  className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                  style={{ background: kpi.iconBg }}
+                  className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border ${kpi.iconBg}`}
                 >
-                  <Icon className="w-5 h-5" style={{ color: kpi.iconColor }} strokeWidth={2.5} />
+                  <Icon className={`w-4 h-4 ${kpi.iconColor}`} strokeWidth={2.4} />
                 </div>
               </div>
-              <div className="flex items-center gap-1.5 mt-3">
-                <ArrowUpRight className="w-3.5 h-3.5" style={{ color: '#16A34A' }} />
-                <span className="text-xs font-semibold" style={{ color: '#16A34A' }}>
+              <div className="flex items-center gap-1.5 mt-3.5 pt-2.5 border-t border-slate-100 text-xs font-semibold text-emerald-600">
+                <ArrowUpRight className="w-3.5 h-3.5" />
+                <span>
                   {kpi.trend} {t.vsYesterday}
                 </span>
               </div>
