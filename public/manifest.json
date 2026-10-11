@@ -1,0 +1,16 @@
+{
+  "name": "GasFlow Petroleum Station System",
+  "short_name": "GasFlow",
+  "description": "Production Offline-First Multi-Device Petroleum Station Management System",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0A192F",
+  "theme_color": "#2563EB",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    }
+  ]
+}
