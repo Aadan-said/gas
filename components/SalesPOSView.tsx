@@ -140,15 +140,15 @@ export const SalesPOSView: React.FC<SalesPOSViewProps> = ({
   ];
 
   return (
-    <div className="space-y-6 pb-12 max-w-7xl mx-auto">
+    <div className="space-y-3 pb-8 sm:pb-6 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-            <Fuel className="w-6 h-6 text-blue-600" />
+          <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+            <Fuel className="w-5 h-5 text-blue-600" />
             <span>{t.newSale}</span>
           </h1>
-          <p className="text-sm font-medium text-slate-500 mt-0.5">
+          <p className="text-xs sm:text-sm font-medium text-slate-500 mt-0.5">
             {language === 'so'
               ? 'Diiwaangeli iib cusub oo shidaal ah, daabac rasiidka.'
               : 'Direct fuel pump POS terminal with instant sync and receipt generation.'}
@@ -157,9 +157,9 @@ export const SalesPOSView: React.FC<SalesPOSViewProps> = ({
       </div>
 
       {/* POS Grid: Left Form (8 cols), Right Summary (4 cols) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-4">
         {/* Left Form: Fuel, Customer, Payment, Quantity */}
-        <div className="lg:col-span-8 bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-6">
+        <div className="xl:col-span-8 bg-white p-4.5 sm:p-5 rounded-2xl border border-[#ECEEF2] shadow-sm space-y-4.5">
           {/* Customer Selection */}
           <div>
             <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">
@@ -169,7 +169,7 @@ export const SalesPOSView: React.FC<SalesPOSViewProps> = ({
               <select
                 value={selectedCustomerId}
                 onChange={e => setSelectedCustomerId(e.target.value)}
-                className="w-full bg-slate-50 hover:bg-slate-100/60 focus:bg-white text-slate-800 text-sm font-medium px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                className="w-full bg-[#F8F9FA] hover:bg-slate-100/60 focus:bg-white text-slate-800 text-sm font-medium px-4 py-2.5 rounded-xl border border-[#ECEEF2] focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-800 transition-all"
               >
                 <option value="">{t.walkInCustomer}</option>
                 {customers.map(c => (
@@ -196,12 +196,14 @@ export const SalesPOSView: React.FC<SalesPOSViewProps> = ({
             <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">
               {language === 'so' ? 'Habka Lacag-bixinta' : 'Payment Method'}
             </label>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
               {[
                 { id: 'cash', label: t.cash, icon: Banknote },
                 { id: 'evc', label: t.evcPlus, icon: Phone },
-                { id: 'card', label: t.card, icon: CreditCard },
-                { id: 'credit', label: t.other, icon: Coins }
+                { id: 'edahab', label: t.edahab, icon: Phone },
+                { id: 'sahal', label: t.sahal, icon: Zap },
+                { id: 'credit', label: t.other, icon: Coins },
+                { id: 'card', label: t.card, icon: CreditCard }
               ].map(pm => {
                 const Icon = pm.icon;
                 const isSelected = selectedPayment === pm.id;
@@ -210,14 +212,14 @@ export const SalesPOSView: React.FC<SalesPOSViewProps> = ({
                     key={pm.id}
                     type="button"
                     onClick={() => setSelectedPayment(pm.id as PaymentMethod)}
-                    className={`py-3 px-3 rounded-xl border font-bold text-xs flex flex-col items-center gap-1.5 transition-all ${
+                    className={`py-2.5 px-2 rounded-xl border font-bold text-xs flex flex-col items-center gap-1 transition-all cursor-pointer ${
                       isSelected
-                        ? 'bg-blue-50 border-blue-600 text-blue-700 shadow-xs ring-1 ring-blue-600'
-                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100/70'
+                        ? 'bg-slate-900 border-slate-900 text-white shadow-xs'
+                        : 'bg-[#F8F9FA] border-[#ECEEF2] text-slate-600 hover:bg-slate-100/70 hover:border-slate-300'
                     }`}
                   >
-                    <Icon className={`w-4 h-4 ${isSelected ? 'text-blue-600' : 'text-slate-400'}`} />
-                    <span>{pm.label}</span>
+                    <Icon className={`w-4 h-4 ${isSelected ? 'text-white' : 'text-slate-400'}`} />
+                    <span className="truncate w-full text-center text-[11px]">{pm.label}</span>
                   </button>
                 );
               })}
@@ -354,9 +356,9 @@ export const SalesPOSView: React.FC<SalesPOSViewProps> = ({
         </div>
 
         {/* Right Card: Sale Summary & Process Button */}
-        <div className="lg:col-span-4 bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
+        <div className="xl:col-span-4 bg-white p-4.5 sm:p-5 rounded-2xl border border-[#ECEEF2] shadow-sm flex flex-col justify-between">
           <div>
-            <h2 className="text-base font-bold text-slate-900 border-b border-slate-100 pb-3">
+            <h2 className="text-base font-bold text-slate-900 border-b border-[#F1F3F6] pb-3">
               {t.saleSummary}
             </h2>
 
@@ -386,14 +388,14 @@ export const SalesPOSView: React.FC<SalesPOSViewProps> = ({
             </div>
 
             {/* Total Display */}
-            <div className="p-5 rounded-2xl bg-gradient-to-br from-blue-50 via-indigo-50/50 to-blue-50/30 border border-blue-100 text-center my-6">
-              <span className="text-xs font-bold text-blue-800 uppercase tracking-wider block">
+            <div className="p-5 rounded-2xl bg-[#F8F9FB] border border-[#ECEEF2] text-center my-6">
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
                 {t.total}
               </span>
-              <div className="text-4xl font-black text-blue-600 mt-1 tracking-tight">
+              <div className="text-4xl font-black text-[#0F172A] mt-1 tracking-tight">
                 ${totalAmount.toFixed(2)}
               </div>
-              <span className="text-[11px] text-blue-500 font-medium block mt-1">
+              <span className="text-[11px] text-slate-400 font-medium block mt-1">
                 Tank Stock Remaining: {(currentTank.currentLevel - litres).toLocaleString()} L
               </span>
             </div>
@@ -402,7 +404,7 @@ export const SalesPOSView: React.FC<SalesPOSViewProps> = ({
           <button
             type="button"
             onClick={handleSubmit}
-            className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-black text-base rounded-2xl shadow-lg shadow-blue-500/30 transition-all transform active:scale-98 flex items-center justify-center gap-2 cursor-pointer"
+            className="w-full py-3.5 bg-[#111318] hover:bg-black text-white font-bold text-sm rounded-xl shadow-xs transition-all transform active:scale-98 flex items-center justify-center gap-2 cursor-pointer"
           >
             <CheckCircle2 className="w-5 h-5" />
             <span>{t.processPayment}</span>
@@ -411,7 +413,7 @@ export const SalesPOSView: React.FC<SalesPOSViewProps> = ({
       </div>
 
       {/* Recent Sales Table with Void feature */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs">
+      <div className="bg-white p-4.5 sm:p-5 rounded-2xl border border-[#ECEEF2] shadow-sm">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-base font-bold text-slate-900">

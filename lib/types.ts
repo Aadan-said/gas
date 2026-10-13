@@ -3,12 +3,16 @@ export type UserRole = 'admin' | 'cashier' | 'manager' | 'accountant';
 export interface User {
   id: string;
   name: string;
+  username?: string;
   email: string;
   role: UserRole;
   pin: string;
   status: 'active' | 'inactive';
   lastLogin?: string;
   avatar?: string;
+  phone?: string;
+  branch?: string;
+  twoFactorEnabled?: boolean;
 }
 
 export type FuelTypeCode = 'PMS' | 'AGO' | 'DPK' | 'LPG';
@@ -37,7 +41,7 @@ export interface Tank {
   lastCalibrated?: string;
 }
 
-export type PaymentMethod = 'cash' | 'evc' | 'card' | 'credit';
+export type PaymentMethod = 'cash' | 'evc' | 'edahab' | 'sahal' | 'card' | 'credit';
 
 export interface Sale {
   id: string;

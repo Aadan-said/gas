@@ -35,7 +35,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
-        className="modal-content max-w-[340px] w-full max-h-[90vh] my-auto rounded-2xl relative flex flex-col overflow-hidden bg-white border border-slate-200 shadow-2xl transition-all"
+        className="modal-content max-w-[340px] w-full max-h-[90vh] my-auto rounded-2xl relative flex flex-col overflow-hidden bg-white border border-[#ECEEF2] shadow-2xl transition-all"
       >
         {/* Close Button */}
         <button
@@ -48,10 +48,10 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
 
         {/* Compact Header */}
         <div
-          className="px-4 py-3.5 flex flex-col items-center text-center bg-gradient-to-b from-blue-50/60 to-white border-b border-dashed border-slate-200"
+          className="px-4 py-3.5 flex flex-col items-center text-center bg-[#F8F9FA] border-b border-dashed border-[#ECEEF2]"
         >
           <div
-            className="w-9 h-9 rounded-xl flex items-center justify-center mb-1.5 shadow-sm bg-gradient-to-br from-blue-600 to-indigo-600 shadow-blue-500/25"
+            className="w-9 h-9 rounded-xl flex items-center justify-center mb-1.5 shadow-sm bg-[#111318]"
           >
             <Flame className="w-4 h-4 fill-white text-white" />
           </div>

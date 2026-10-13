@@ -27,8 +27,19 @@ export const INITIAL_STATION: StationConfig = {
 
 export const INITIAL_USERS: User[] = [
   {
+    id: 'u_0',
+    name: 'Aadan Said',
+    username: 'aadan',
+    email: 'aadan@gasflow.so',
+    role: 'admin',
+    pin: 'aadan5754',
+    status: 'active',
+    lastLogin: 'Just now'
+  },
+  {
     id: 'u_1',
     name: 'Ahmed Ali',
+    username: 'admin',
     email: 'admin@gasflow.so',
     role: 'admin',
     pin: '1234',
@@ -38,6 +49,7 @@ export const INITIAL_USERS: User[] = [
   {
     id: 'u_2',
     name: 'Fartuun Mohamed',
+    username: 'fartuun',
     email: 'fartuun@gasflow.so',
     role: 'cashier',
     pin: '1111',
@@ -47,6 +59,7 @@ export const INITIAL_USERS: User[] = [
   {
     id: 'u_3',
     name: 'Ali Hassan',
+    username: 'manager',
     email: 'manager@gasflow.so',
     role: 'manager',
     pin: '2222',
@@ -56,6 +69,7 @@ export const INITIAL_USERS: User[] = [
   {
     id: 'u_4',
     name: 'Sahra Yusuf',
+    username: 'accountant',
     email: 'accountant@gasflow.so',
     role: 'accountant',
     pin: '3333',
@@ -71,7 +85,7 @@ export const INITIAL_TANKS: Tank[] = [
     fuelType: 'PMS',
     name: 'Petrol (PMS)',
     capacity: 10000,
-    currentLevel: 6800,
+    currentLevel: 6780,
     unitPrice: 1.70,
     minThreshold: 2000,
     status: 'normal',
@@ -83,7 +97,7 @@ export const INITIAL_TANKS: Tank[] = [
     fuelType: 'AGO',
     name: 'Diesel (AGO)',
     capacity: 10000,
-    currentLevel: 4200,
+    currentLevel: 4190,
     unitPrice: 1.50,
     minThreshold: 2000,
     status: 'normal',
@@ -380,8 +394,14 @@ export function getInitialState(): AppState {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
+      const existingUserIds = new Set((parsed.users || []).map((u: User) => u.id));
+      const mergedUsers = [
+        ...(parsed.users || []),
+        ...INITIAL_USERS.filter(u => !existingUserIds.has(u.id))
+      ];
       return {
         ...parsed,
+        users: mergedUsers,
         currentUser: parsed.currentUser || INITIAL_USERS[0]
       };
     }

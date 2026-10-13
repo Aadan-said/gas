@@ -136,7 +136,7 @@ export const StaffView: React.FC<StaffViewProps> = ({
         <div className="flex items-center gap-3">
           <button
             onClick={() => setModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md shadow-blue-500/20 transition-all cursor-pointer"
+            className="btn-primary"
           >
             <Plus className="w-4 h-4" />
             <span>{t.addStaff}</span>
@@ -144,8 +144,8 @@ export const StaffView: React.FC<StaffViewProps> = ({
         </div>
       </div>
 
-      {/* Staff Table Matching Mockup */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs">
+      {/* Staff Table */}
+      <div className="bg-white p-6 rounded-2xl border border-[#ECEEF2] shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider border-b border-slate-200">
@@ -213,8 +213,8 @@ export const StaffView: React.FC<StaffViewProps> = ({
         </div>
       </div>
 
-      {/* Role-Based Permissions Matrix (Based on prompt table) */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
+      {/* Role-Based Permissions Matrix */}
+      <div className="bg-white p-6 rounded-2xl border border-[#ECEEF2] shadow-sm space-y-4">
         <div>
           <h2 className="text-base font-bold text-slate-900">
             Role-Based Access Control (RBAC Policy Matrix)

@@ -86,12 +86,12 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
   ];
 
   return (
-    <div className="space-y-6 pb-12 max-w-7xl mx-auto">
+    <div className="space-y-3 pb-8 sm:pb-6 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-            <Wallet className="w-6 h-6 text-blue-600" />
+          <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+            <Wallet className="w-5 h-5 text-blue-600" />
             <span>{language === 'so' ? 'Maaliyadda & Xisaabaadka' : 'Finance & Accounting'}</span>
           </h1>
           <p className="text-sm font-medium text-slate-500 mt-0.5">
@@ -103,7 +103,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
         <div className="flex items-center gap-3">
           <button
             onClick={() => setModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md shadow-blue-500/20 transition-all cursor-pointer"
+            className="btn-primary"
           >
             <Plus className="w-4 h-4" />
             <span>{t.addExpense}</span>
@@ -112,7 +112,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 border-b border-slate-200">
+      <div className="segmented-control">
         {[
           { id: 'expenses', label: t.expenses },
           { id: 'cashflow', label: t.cashFlow },
@@ -122,11 +122,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
-            className={`pb-3 px-4 text-xs font-bold transition-all relative ${
-              activeTab === tab.id
-                ? 'text-blue-600 border-b-2 border-blue-600'
-                : 'text-slate-500 hover:text-slate-900'
-            }`}
+            className={`segmented-item ${activeTab === tab.id ? 'active' : ''}`}
           >
             {tab.label}
           </button>
@@ -134,43 +130,55 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
-          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-            Total Revenue
-          </span>
-          <div className="text-2xl font-black text-emerald-600 mt-1">
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+        <div className="bg-white p-4 sm:p-4.5 rounded-2xl border border-[#ECEEF2] shadow-sm">
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="w-1 h-3 rounded-full bg-emerald-600" />
+            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+              Total Revenue
+            </span>
+          </div>
+          <div className="text-2xl font-black text-slate-900 mt-1">
             ${totalSales.toFixed(2)}
           </div>
         </div>
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
-          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-            Total Expenses
-          </span>
+        <div className="bg-white p-5 rounded-2xl border border-[#ECEEF2] shadow-sm">
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="w-1 h-3 rounded-full bg-rose-600" />
+            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+              Total Expenses
+            </span>
+          </div>
           <div className="text-2xl font-black text-rose-600 mt-1">
             ${totalExpenses.toFixed(2)}
           </div>
         </div>
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
-          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-            Cash in Register
-          </span>
+        <div className="bg-white p-5 rounded-2xl border border-[#ECEEF2] shadow-sm">
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="w-1 h-3 rounded-full bg-blue-600" />
+            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+              Cash in Register
+            </span>
+          </div>
           <div className="text-2xl font-black text-slate-900 mt-1">
             ${(totalCashCollected - totalExpenses).toFixed(2)}
           </div>
         </div>
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
-          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-            Customer Credit Debts
-          </span>
+        <div className="bg-white p-5 rounded-2xl border border-[#ECEEF2] shadow-sm">
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="w-1 h-3 rounded-full bg-amber-500" />
+            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+              Customer Credit Debts
+            </span>
+          </div>
           <div className="text-2xl font-black text-amber-600 mt-1">
             ${totalDebts.toFixed(2)}
           </div>
         </div>
       </div>
 
-      {/* Main Table Matching Bottom-Middle-Right Mockup */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs">
+      {/* Main Table */}
+      <div className="bg-white p-4.5 sm:p-5 rounded-2xl border border-[#ECEEF2] shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider border-b border-slate-200">

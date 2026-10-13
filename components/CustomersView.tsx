@@ -91,24 +91,24 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
   };
 
   return (
-    <div className="space-y-6 pb-12 max-w-7xl mx-auto">
+    <div className="space-y-3 pb-8 sm:pb-6 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-            <Users className="w-6 h-6 text-blue-600" />
+          <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+            <Users className="w-5 h-5 text-blue-600" />
             <span>{t.customerManagement}</span>
           </h1>
-          <p className="text-sm font-medium text-slate-500 mt-0.5">
+          <p className="text-xs sm:text-sm font-medium text-slate-500 mt-0.5">
             {language === 'so'
               ? 'Diiwaanka macaamiisha shidaalka, xadka deynta iyo bixinta lacagaha.'
               : 'Fleet accounts, credit debt limits, repayments and account ledgers.'}
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
           <button
             onClick={() => setAddModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md shadow-blue-500/20 transition-all cursor-pointer"
+            className="btn-primary"
           >
             <Plus className="w-4 h-4" />
             <span>{t.addCustomer}</span>
@@ -116,34 +116,81 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
         </div>
       </div>
 
-      {/* KPI Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
-          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-            Total Accounts
-          </span>
-          <div className="text-2xl font-black text-slate-900 mt-1">{customers.length}</div>
-        </div>
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
-          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-            Total Outstanding Debt
-          </span>
-          <div className="text-2xl font-black text-rose-600 mt-1">
-            ${totalOutstanding.toFixed(2)}
+      {/* KPI Stats — matching Dashboard card style */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {/* Total Accounts */}
+        <div className="card card-hover p-4 sm:p-4.5 bg-white flex flex-col justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="w-1 h-3 rounded-full bg-blue-600" />
+              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                {language === 'so' ? 'Wadarta Xisaabaadka' : 'Total Accounts'}
+              </span>
+            </div>
+            <div className="text-[26px] font-extrabold text-[#0F172A] tracking-tight mt-2.5">
+              {customers.length}
+            </div>
+          </div>
+          <div className="flex items-center gap-2 mt-3 pt-3 border-t border-[#F1F3F6]">
+            <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 border border-blue-100">
+              {language === 'so' ? 'Fleet + Cash' : 'Fleet + Cash'}
+            </span>
+            <span className="text-[11.5px] text-slate-400 font-medium">
+              {language === 'so' ? 'macaamiil diiwaan ah' : 'registered customers'}
+            </span>
           </div>
         </div>
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
-          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-            Active Debtors
-          </span>
-          <div className="text-2xl font-black text-amber-600 mt-1">
-            {customers.filter(c => c.currentBalance > 0).length}
+
+        {/* Total Outstanding Debt */}
+        <div className="card card-hover p-4 sm:p-4.5 bg-white flex flex-col justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="w-1 h-3 rounded-full bg-rose-500" />
+              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                {language === 'so' ? 'Wadarta Deynta Jirta' : 'Total Outstanding Debt'}
+              </span>
+            </div>
+            <div className="text-[26px] font-extrabold text-rose-600 tracking-tight mt-2.5">
+              ${totalOutstanding.toFixed(2)}
+            </div>
+          </div>
+          <div className="flex items-center gap-2 mt-3 pt-3 border-t border-[#F1F3F6]">
+            <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 border border-rose-100">
+              {language === 'so' ? 'Deyn furan' : 'Open credit'}
+            </span>
+            <span className="text-[11.5px] text-slate-400 font-medium">
+              {language === 'so' ? 'lacag aan la bixin' : 'awaiting settlement'}
+            </span>
+          </div>
+        </div>
+
+        {/* Active Debtors */}
+        <div className="card card-hover p-4 sm:p-4.5 bg-white flex flex-col justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="w-1 h-3 rounded-full bg-amber-500" />
+              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                {language === 'so' ? 'Macaamiil Deyn Leh' : 'Active Debtors'}
+              </span>
+            </div>
+            <div className="text-[26px] font-extrabold text-amber-600 tracking-tight mt-2.5">
+              {customers.filter(c => c.currentBalance > 0).length}
+            </div>
+          </div>
+          <div className="flex items-center gap-2 mt-3 pt-3 border-t border-[#F1F3F6]">
+            <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 border border-amber-100">
+              {language === 'so' ? 'Deyn jira' : 'Has balance'}
+            </span>
+            <span className="text-[11.5px] text-slate-400 font-medium">
+              {language === 'so' ? 'ka mid ah macaamiisha' : 'of total accounts'}
+            </span>
           </div>
         </div>
       </div>
 
+
       {/* Table Section */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
+      <div className="bg-white p-4.5 sm:p-5 rounded-2xl border border-[#ECEEF2] shadow-sm space-y-3.5">
         <div className="flex items-center justify-between">
           <div className="relative w-72">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -316,10 +363,12 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                 <select
                   value={payMethod}
                   onChange={e => setPayMethod(e.target.value as PaymentMethod)}
-                  className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white"
+                  className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white text-xs"
                 >
-                  <option value="evc">EVC Plus</option>
-                  <option value="cash">Cash in Hand</option>
+                  <option value="evc">EVC Plus (Hormuud)</option>
+                  <option value="edahab">eDahab (Somtel)</option>
+                  <option value="sahal">Sahal / Zaad (Golis / Telesom)</option>
+                  <option value="cash">Cash in Hand (Caddaan)</option>
                   <option value="card">Bank Transfer / Card</option>
                 </select>
               </div>

@@ -115,12 +115,12 @@ export const TanksView: React.FC<TanksViewProps> = ({
   };
 
   return (
-    <div className="space-y-6 pb-12 max-w-7xl mx-auto">
+    <div className="space-y-3 pb-8 sm:pb-6 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-            <Database className="w-6 h-6 text-blue-600" />
+          <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+            <Database className="w-5 h-5 text-blue-600" />
             <span>{t.tanksManagement}</span>
           </h1>
           <p className="text-sm font-medium text-slate-500 mt-0.5">
@@ -129,17 +129,17 @@ export const TanksView: React.FC<TanksViewProps> = ({
               : 'Underground fuel tanks, real-time volume, replenishment and dipstick variance.'}
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
           <button
             onClick={() => setCalibrateModalOpen(true)}
-            className="flex items-center gap-1.5 px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-all"
+            className="btn-secondary"
           >
-            <SlidersHorizontal className="w-4 h-4" />
+            <SlidersHorizontal className="w-3.5 h-3.5" />
             <span>{t.calibrateDipstick}</span>
           </button>
           <button
             onClick={() => setDeliveryModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md shadow-blue-500/20 transition-all cursor-pointer"
+            className="btn-primary"
           >
             <Plus className="w-4 h-4" />
             <span>{t.addDelivery}</span>
@@ -147,8 +147,8 @@ export const TanksView: React.FC<TanksViewProps> = ({
         </div>
       </div>
 
-      {/* Tanks Management Table (Exact match from bottom-middle mockup!) */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs">
+      {/* Tanks Management Table */}
+      <div className="bg-white p-4.5 sm:p-5 rounded-2xl border border-[#ECEEF2] shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider border-b border-slate-200">
@@ -288,7 +288,7 @@ export const TanksView: React.FC<TanksViewProps> = ({
       </div>
 
       {/* Deliveries History */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs">
+      <div className="bg-white p-4.5 sm:p-5 rounded-2xl border border-[#ECEEF2] shadow-sm">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-base font-bold text-slate-900">

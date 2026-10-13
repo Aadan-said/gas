@@ -5,7 +5,8 @@ import {
   getInitialState,
   saveState,
   generateUUID,
-  AppState
+  AppState,
+  INITIAL_USERS
 } from '@/lib/storage';
 import {
   User,
@@ -22,22 +23,21 @@ import {
   StationConfig
 } from '@/lib/types';
 import { translations, Language } from '@/lib/translations';
+import { apiLogin, apiLogout, apiRegister } from '@/lib/api';
 
-// Components
-import { Sidebar } from '@/components/Sidebar';
-import { Header } from '@/components/Header';
-import { DashboardView } from '@/components/DashboardView';
-import { SalesPOSView } from '@/components/SalesPOSView';
-import { TanksView } from '@/components/TanksView';
-import { InventoryView } from '@/components/InventoryView';
-import { CustomersView } from '@/components/CustomersView';
-import { FinanceView } from '@/components/FinanceView';
-import { ReportsView } from '@/components/ReportsView';
-import { StaffView } from '@/components/StaffView';
-import { SyncEngineModal } from '@/components/SyncEngineModal';
-import { SettingsView } from '@/components/SettingsView';
-import { ReceiptModal } from '@/components/ReceiptModal';
-import { LoginModal } from '@/components/LoginModal';
+// Modular Enterprise Architecture Components
+import { AuthPortal, LoginModal } from '@/components/auth';
+import { Sidebar, Header, ToastContainer } from '@/components/layout';
+import { DashboardView } from '@/components/dashboard';
+import { SalesPOSView, ReceiptModal } from '@/components/sales';
+import { TanksView } from '@/components/tanks';
+import { InventoryView } from '@/components/inventory';
+import { CustomersView } from '@/components/customers';
+import { FinanceView } from '@/components/finance';
+import { ReportsView } from '@/components/reports';
+import { StaffView } from '@/components/staff';
+import { SyncEngineModal } from '@/components/sync';
+import { SettingsView } from '@/components/settings';
 import {
   CheckCircle,
   AlertCircle,
@@ -61,12 +61,14 @@ export default function Home() {
 
   // UI state
   const [currentView, setCurrentView] = useState<string>('dashboard');
-  const [language, setLanguage] = useState<Language>('en');
+  const [language, setLanguage] = useState<Language>('so');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedReceiptSale, setSelectedReceiptSale] = useState<Sale | null>(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authInitialMode, setAuthInitialMode] = useState<'login' | 'register' | 'forgot' | '2fa'>('login');
 
   // Toast system
   const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'success') => {
@@ -81,18 +83,31 @@ export default function Home() {
     setToasts(prev => prev.filter(t => t.id !== id));
   };
 
-  // Hydrate stored state from localStorage
+  // Hydrate stored state from localStorage + restore auth session
   useEffect(() => {
     setMounted(true);
     try {
       const raw = localStorage.getItem('gasflow_app_state_v2');
       if (raw) {
         const parsed = JSON.parse(raw);
+        const existingUserIds = new Set((parsed.users || []).map((u: User) => u.id));
+        const mergedUsers = [
+          ...(parsed.users || []),
+          ...INITIAL_USERS.filter(u => !existingUserIds.has(u.id))
+        ];
         setState(prev => ({
           ...prev,
           ...parsed,
+          users: mergedUsers,
           currentUser: parsed.currentUser || prev.currentUser
         }));
+        // Only restore auth if session was explicitly active in this browser session
+        const sessionActive = typeof window !== 'undefined' && sessionStorage.getItem('gasflow_session_active') === 'true';
+        if (sessionActive && parsed.currentUser) {
+          setIsAuthenticated(true);
+        } else {
+          setIsAuthenticated(false);
+        }
       }
     } catch (e) {
       console.error('Error hydrating GasFlow state:', e);
@@ -115,6 +130,117 @@ export default function Home() {
 
   const currentUser = state.currentUser || state.users[0];
   const pendingSyncCount = state.syncEvents.filter(e => e.syncStatus === 'pending').length;
+
+  // 0. Authentication Handlers
+  const handleLogin = async (user: User) => {
+    // ── Try backend API first ──────────────────────────────────────────────
+    const { data, error: apiErr, offline } = await apiLogin(
+      user.username ?? user.email,
+      user.pin
+    );
+
+    // Use API user if available, otherwise use the passed user (offline mode)
+    const loggedInUser: User = (data && !offline) ? data.user : user;
+
+    if (apiErr && !offline) {
+      // Show non-fatal warning — we still allow offline login via seed users
+      console.warn('API login failed, using offline mode:', apiErr);
+    }
+
+    setState(prev => ({
+      ...prev,
+      currentUser: loggedInUser,
+      auditLogs: [
+        {
+          id: `log_${Date.now()}`,
+          userId: loggedInUser.id,
+          userName: loggedInUser.name,
+          action: 'USER_LOGIN',
+          details: `User logged in with role: ${loggedInUser.role.toUpperCase()}${offline ? ' (offline mode)' : ''}`,
+          createdAt: new Date().toISOString()
+        },
+        ...prev.auditLogs
+      ]
+    }));
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('gasflow_session_active', 'true');
+    }
+    setIsAuthenticated(true);
+    setCurrentView('dashboard');
+    showToast(
+      language === 'so'
+        ? `Ku soo dhowow GasFlow, ${loggedInUser.name} (${loggedInUser.role.toUpperCase()})!`
+        : `Welcome to GasFlow, ${loggedInUser.name}!`,
+      'success'
+    );
+  };
+
+  const handleRegister = async (newUser: User) => {
+    // ── Try backend API first ──────────────────────────────────────────────
+    const { data, offline } = await apiRegister({
+      name: newUser.name,
+      username: newUser.username ?? newUser.email,
+      email: newUser.email,
+      password: newUser.pin, // AuthPortal stores plain password in pin field during registration
+      pin: newUser.pin,
+      role: newUser.role,
+      phone: newUser.phone,
+      branch: newUser.branch,
+    });
+
+    const registeredUser: User = (data && !offline) ? data.user : newUser;
+
+    setState(prev => ({
+      ...prev,
+      users: [registeredUser, ...prev.users],
+      currentUser: registeredUser,
+      auditLogs: [
+        {
+          id: `log_${Date.now()}`,
+          userId: registeredUser.id,
+          userName: registeredUser.name,
+          action: 'USER_REGISTERED',
+          details: `New account created: ${registeredUser.name} (${registeredUser.role.toUpperCase()})`,
+          createdAt: new Date().toISOString()
+        },
+        ...prev.auditLogs
+      ]
+    }));
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('gasflow_session_active', 'true');
+    }
+    setIsAuthenticated(true);
+    setCurrentView('dashboard');
+    showToast(
+      language === 'so'
+        ? `Akoon cusub waa la sameeyay: ${registeredUser.name}`
+        : `Account created successfully: ${registeredUser.name}`,
+      'success'
+    );
+  };
+
+  const handleLogout = async () => {
+    // Clear backend session cookie
+    await apiLogout();
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('gasflow_session_active');
+    }
+    // Clear persisted auth from localStorage
+    const raw = localStorage.getItem('gasflow_app_state_v2');
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        localStorage.setItem('gasflow_app_state_v2', JSON.stringify({ ...parsed, currentUser: null }));
+      } catch { /* ignore */ }
+    }
+    setIsAuthenticated(false);
+    setAuthInitialMode('login');
+    setCurrentView('dashboard');
+    showToast(
+      language === 'so' ? 'Waad ka baxday nidaamka GasFlow. Saldhigga waa la quflay.' : 'You have signed out of GasFlow. Station locked.',
+      'info'
+    );
+  };
 
   // 1. Process Sale (Single atomic transaction)
   const handleProcessSale = (saleData: {
@@ -404,6 +530,52 @@ export default function Home() {
     showToast(`Dipstick calibrated: variance ${diff >= 0 ? '+' : ''}${diff}L adjusted.`);
   };
 
+  // 4b. Manual Stock Adjustment
+  const handleStockAdjustment = (adj: { tankId: string; quantity: number; reason: string }) => {
+    const targetTank = state.tanks.find(t => t.id === adj.tankId);
+    if (!targetTank) return;
+    const newLevel = Math.max(0, parseFloat((targetTank.currentLevel + adj.quantity).toFixed(2)));
+    const timestamp = new Date().toISOString().split('T')[0];
+
+    const updatedTanks = state.tanks.map(t => {
+      if (t.id === adj.tankId) {
+        return { ...t, currentLevel: newLevel };
+      }
+      return t;
+    });
+
+    const newMovement = {
+      id: `mov_${generateUUID()}`,
+      tankId: adj.tankId,
+      fuelType: targetTank.fuelType,
+      type: 'adjustment' as const,
+      quantity: adj.quantity,
+      previousLevel: targetTank.currentLevel,
+      newLevel,
+      referenceId: `ADJ-${Date.now().toString().slice(-4)}`,
+      note: adj.reason,
+      createdAt: timestamp
+    };
+
+    const newAuditLog = {
+      id: `log_${generateUUID()}`,
+      userId: currentUser.id,
+      userName: currentUser.name,
+      action: 'STOCK_ADJUSTMENT',
+      details: `Adjusted ${targetTank.name} by ${adj.quantity >= 0 ? '+' : ''}${adj.quantity}L. Reason: ${adj.reason}`,
+      createdAt: new Date().toISOString()
+    };
+
+    setState(prev => ({
+      ...prev,
+      tanks: updatedTanks,
+      movements: [newMovement, ...prev.movements],
+      auditLogs: [newAuditLog, ...prev.auditLogs]
+    }));
+
+    showToast(`Stock adjustment of ${adj.quantity >= 0 ? '+' : ''}${adj.quantity}L applied to ${targetTank.name}.`);
+  };
+
   // 5. Update Tank Price
   const handleUpdateTankPrice = (tankId: string, newPrice: number) => {
     const updatedTanks = state.tanks.map(t => {
@@ -590,6 +762,42 @@ export default function Home() {
     );
   }
 
+  if (!isAuthenticated) {
+    return (
+      <>
+        {/* Toast Stack */}
+        <div className="fixed bottom-6 right-6 z-[100] flex flex-col gap-2 items-end pointer-events-none">
+          {toasts.map(toast => (
+            <div
+              key={toast.id}
+              className="toast pointer-events-auto flex items-center gap-3 px-4 py-3 min-w-[260px] max-w-[400px] bg-white border border-slate-200 rounded-xl shadow-lg"
+            >
+              {toast.type === 'success' && <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />}
+              {toast.type === 'error'   && <AlertCircle  className="w-4 h-4 text-rose-600 shrink-0" />}
+              {toast.type === 'info'    && <AlertCircle  className="w-4 h-4 text-blue-600 shrink-0" />}
+              <span className="text-xs font-semibold text-slate-800 flex-1">{toast.message}</span>
+              <button
+                onClick={() => dismissToast(toast.id)}
+                className="text-slate-400 hover:text-slate-700 transition-colors shrink-0"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ))}
+        </div>
+
+        <AuthPortal
+          users={state.users}
+          onLogin={handleLogin}
+          onRegister={handleRegister}
+          language={language}
+          onLanguageChange={setLanguage}
+          initialMode={authInitialMode}
+        />
+      </>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#F4F6FA] text-slate-900 flex flex-col font-sans">
       {/* Toast Stack */}
@@ -625,6 +833,7 @@ export default function Home() {
           pendingSyncCount={pendingSyncCount}
           isOpenMobile={isMobileMenuOpen}
           onCloseMobile={() => setIsMobileMenuOpen(false)}
+          onLogout={handleLogout}
         />
 
         {/* Content Wrapper */}
@@ -641,10 +850,12 @@ export default function Home() {
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
             onToggleMobileMenu={() => setIsMobileMenuOpen(prev => !prev)}
+            onOpenAuthPortal={() => setCurrentView('auth')}
+            onLogout={handleLogout}
           />
 
           {/* Active View */}
-          <main className="flex-1 p-3.5 sm:p-5 lg:p-6 pb-24 lg:pb-8 overflow-y-auto">
+          <main className="flex-1 p-3 sm:p-3.5 lg:p-4 pb-36 sm:pb-40 lg:pb-8 overflow-y-auto">
             {currentView === 'dashboard' && (
               <DashboardView
                 currentUser={currentUser}
@@ -687,6 +898,7 @@ export default function Home() {
                 movements={state.movements}
                 currentUser={currentUser}
                 language={language}
+                onAddAdjustment={handleStockAdjustment}
               />
             )}
 
@@ -754,14 +966,40 @@ export default function Home() {
                 onResetData={handleResetData}
               />
             )}
+
+            {currentView === 'auth' && (
+              <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-2 sm:p-4">
+                <AuthPortal
+                  users={state.users}
+                  onLogin={handleLogin}
+                  onRegister={handleRegister}
+                  language={language}
+                  onLanguageChange={setLanguage}
+                  onClose={() => setCurrentView('dashboard')}
+                  initialMode={authInitialMode}
+                />
+              </div>
+            )}
+
+            {/* Extra breathing buffer for mobile screens so all cards complete well above tabs */}
+            <div className="h-4 lg:hidden" aria-hidden="true" />
           </main>
         </div>
       </div>
 
-      {/* Mobile Bottom Navigation Bar (Screen < lg) */}
+      {/* Subtle bottom gradient scrim so content scrolling into dock dissolves smoothly */}
+      <div 
+        className="fixed bottom-0 inset-x-0 h-28 bg-gradient-to-t from-[#F4F6FA] via-[#F4F6FA]/80 to-transparent pointer-events-none z-30 lg:hidden" 
+        aria-hidden="true"
+      />
+
+      {/* Mobile Bottom Navigation Bar (Screen < lg) - Floating Island Dock with clear separation and gap */}
       <nav
-        className="fixed bottom-0 inset-x-0 z-30 bg-white/95 backdrop-blur-md border-t border-[#E2E6EF] px-2 py-1.5 flex items-center justify-around shadow-lg lg:hidden"
+        className="fixed bottom-2.5 inset-x-2.5 sm:bottom-3 sm:inset-x-6 z-40 max-w-lg mx-auto bg-white/95 backdrop-blur-xl border border-slate-200/90 rounded-2xl shadow-[0_12px_36px_rgba(15,23,42,0.14),0_2px_8px_rgba(15,23,42,0.04)] lg:hidden transition-all"
+        style={{ marginBottom: 'env(safe-area-inset-bottom, 0px)' }}
+        aria-label="Mobile Navigation"
       >
+        <div className="flex items-center justify-around px-1 py-1">
         {[
           { id: 'dashboard', label: language === 'so' ? 'Hoyga' : 'Home', icon: LayoutDashboard },
           { id: 'sales',     label: language === 'so' ? 'Iibka' : 'Sales', icon: Fuel },
@@ -770,7 +1008,7 @@ export default function Home() {
           { id: 'menu',      label: language === 'so' ? 'Wax kale' : 'Menu', icon: Menu, isMenuButton: true }
         ].map(tab => {
           const Icon = tab.icon;
-          const isActive = currentView === tab.id;
+          const isActive = currentView === tab.id && !tab.isMenuButton;
           return (
             <button
               key={tab.id}
@@ -781,17 +1019,28 @@ export default function Home() {
                   setCurrentView(tab.id);
                 }
               }}
-              className={`flex flex-col items-center gap-1 py-1 px-3 rounded-xl transition-all cursor-pointer ${
-                isActive && !tab.isMenuButton
-                  ? 'text-blue-600 font-bold'
-                  : 'text-slate-500 hover:text-slate-900 font-medium'
+              className={`flex flex-col items-center gap-0.5 py-1.5 px-3 rounded-xl transition-all duration-200 cursor-pointer min-w-[56px] relative ${
+                isActive
+                  ? 'text-blue-600'
+                  : 'text-slate-400 hover:text-slate-700'
               }`}
             >
-              <Icon className="w-5 h-5" />
-              <span className="text-[10px] tracking-tight">{tab.label}</span>
+              {/* Active pill indicator */}
+              {isActive && (
+                <span className="absolute top-0.5 left-1/2 -translate-x-1/2 w-5 h-0.5 rounded-full bg-blue-600" />
+              )}
+              <div className={`p-1.5 rounded-xl transition-all ${
+                isActive ? 'bg-blue-50' : ''
+              }`}>
+                <Icon className={`w-5 h-5 ${isActive ? 'text-blue-600' : 'text-slate-400'}`} />
+              </div>
+              <span className={`text-[10px] tracking-tight font-medium leading-none ${
+                isActive ? 'text-blue-600 font-semibold' : 'text-slate-400'
+              }`}>{tab.label}</span>
             </button>
           );
         })}
+        </div>
       </nav>
 
       {/* Receipt Modal */}

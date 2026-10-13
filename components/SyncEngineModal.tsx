@@ -69,7 +69,7 @@ export const SyncEngineModal: React.FC<SyncEngineModalProps> = ({
           <button
             onClick={handleForceSync}
             disabled={isSyncing}
-            className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-md shadow-blue-500/20 transition-all cursor-pointer"
+            className="btn-primary"
           >
             <RotateCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
             <span>{isSyncing ? 'Synchronizing...' : t.forceSync}</span>
@@ -78,7 +78,7 @@ export const SyncEngineModal: React.FC<SyncEngineModalProps> = ({
       </div>
 
       {/* 3-Tier Architecture Visualization */}
-      <div className="bg-gradient-to-br from-white via-slate-50/60 to-blue-50/40 p-6 rounded-3xl border border-slate-200/90 text-slate-900 shadow-xs relative overflow-hidden">
+      <div className="bg-white p-6 rounded-3xl border border-[#ECEEF2] text-slate-900 shadow-sm relative overflow-hidden">
         <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
 
         <div className="relative z-10">
@@ -88,7 +88,7 @@ export const SyncEngineModal: React.FC<SyncEngineModalProps> = ({
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
             {/* Tier 1: Client Devices */}
-            <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs flex flex-col justify-between h-48">
+            <div className="bg-white p-5 rounded-2xl border border-[#ECEEF2] shadow-sm flex flex-col justify-between h-48">
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-bold text-blue-600 uppercase">Tier 1: Clients</span>
                 <Smartphone className="w-5 h-5 text-blue-600" />
@@ -127,7 +127,7 @@ export const SyncEngineModal: React.FC<SyncEngineModalProps> = ({
             </div>
 
             {/* Tier 3: Central Cloud Server */}
-            <div className="bg-white p-5 rounded-2xl border border-slate-200/90 shadow-xs flex flex-col justify-between h-48">
+            <div className="bg-white p-5 rounded-2xl border border-[#ECEEF2] shadow-sm flex flex-col justify-between h-48">
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-bold text-blue-600 uppercase">Tier 3: Cloud</span>
                 <Cloud className="w-5 h-5 text-blue-600" />
@@ -207,7 +207,7 @@ export const SyncEngineModal: React.FC<SyncEngineModalProps> = ({
       </div>
 
       {/* Outbox Queue Table */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
+      <div className="bg-white p-6 rounded-2xl border border-[#ECEEF2] shadow-sm space-y-4">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-base font-bold text-slate-900">

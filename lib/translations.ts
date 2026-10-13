@@ -33,7 +33,7 @@ export const translations = {
     logout: 'Logout',
     
     // Dashboard
-    welcomeGreeting: 'Welcome,',
+    welcomeGreeting: 'Welcome',
     whatsHappening: "Here's what's happening at your station today.",
     totalSalesToday: 'Total Sales (Today)',
     fuelSoldLitres: 'Fuel Sold (Litres)',
@@ -62,6 +62,8 @@ export const translations = {
     processPayment: 'Process Payment',
     cash: 'Cash',
     evcPlus: 'EVC Plus',
+    edahab: 'eDahab',
+    sahal: 'Sahal / Zaad',
     card: 'Card',
     other: 'Debt / Credit',
     
@@ -125,7 +127,7 @@ export const translations = {
   },
   so: {
     systemTitle: 'GasFlow',
-    systemSubtitle: 'Nidaamka Saldhigga Shidaalka',
+    systemSubtitle: 'Nidaamka Kaalinta Shidaalka',
     welcomeBack: 'Kusoo dhawoow! Fadlan geli xogtaada.',
     signIn: 'Gal akoonkaaga',
     username: 'Magaca isticmaalaha',
@@ -139,7 +141,7 @@ export const translations = {
     online: 'Khadka wuu furan yahay',
     offline: 'Khad la\'aan (Offline)',
     lanMode: 'LAN Server Xarunta',
-    mainStation: 'Saldhigga Dhexe',
+    mainStation: 'Kaalinta Dhexe',
     
     // Navigation
     dashboard: 'Guud ahaan',
@@ -155,7 +157,7 @@ export const translations = {
     logout: 'Ka bax',
     
     // Dashboard
-    welcomeGreeting: 'Kusoo dhawoow,',
+    welcomeGreeting: 'Kusoo dhawoow',
     whatsHappening: 'Waa kuwan waxa ka socda saldhiggaaga maanta.',
     totalSalesToday: 'Wadarta Iibka (Maanta)',
     fuelSoldLitres: 'Shidaalka La Iibiyay (Litir)',
@@ -184,6 +186,8 @@ export const translations = {
     processPayment: 'Xaqiiji & Bixi Lacagta',
     cash: 'Caddaan',
     evcPlus: 'EVC Plus',
+    edahab: 'eDahab',
+    sahal: 'Sahal / Zaad',
     card: 'Kaadh / Bank',
     other: 'Deyn (Credit)',
     
@@ -210,7 +214,7 @@ export const translations = {
     accountStatement: 'Bayaanka Xisaabta',
     
     // Finance
-    expenses: 'Kharashka Saldhigga',
+    expenses: 'Kharashka Kaalinta',
     addExpense: 'Kharash Cusub',
     cashFlow: 'Dhaqdhaqaaqa Lacagta',
     deposits: 'Dhigashada Bankiga',

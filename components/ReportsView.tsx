@@ -115,28 +115,28 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
   };
 
   return (
-    <div className="space-y-6 pb-12 max-w-7xl mx-auto">
+    <div className="space-y-3 pb-8 sm:pb-6 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-            <BarChart3 className="w-6 h-6 text-blue-600" />
+          <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+            <BarChart3 className="w-5 h-5 text-blue-600" />
             <span>{t.reports}</span>
           </h1>
-          <p className="text-sm font-medium text-slate-500 mt-0.5">
+          <p className="text-xs sm:text-sm font-medium text-slate-500 mt-0.5">
             {language === 'so'
               ? 'Warbixinnada iibka, dakhliga, haamaha shidaalka iyo diiwaanka xisaabaadka.'
               : 'Station analytics, shift reconciliation, stock audit and exportable ledgers.'}
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700">
-            <Calendar className="w-4 h-4 text-slate-400" />
+        <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-[#ECEEF2] text-xs font-semibold text-slate-700 shadow-2xs">
+            <Calendar className="w-3.5 h-3.5 text-slate-400" />
             <span>Apr 20, 2025 - Apr 29, 2025</span>
           </div>
           <button
             onClick={exportCSV}
-            className="flex items-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md shadow-blue-500/20 transition-all cursor-pointer"
+            className="btn-primary"
           >
             <Download className="w-3.5 h-3.5" />
             <span>Export CSV</span>
@@ -144,8 +144,8 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
         </div>
       </div>
 
-      {/* 6 Report Category Cards (Exact match from mockup!) */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3.5">
+      {/* 6 Report Category Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         {reportCards.map(rc => {
           const Icon = rc.icon;
           const isSelected = selectedReport === rc.id;
@@ -154,18 +154,27 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
             <button
               key={rc.id}
               onClick={() => setSelectedReport(rc.id as any)}
-              className={`p-4 rounded-2xl border text-left flex flex-col justify-between transition-all ${
+              className={`p-3.5 rounded-2xl border text-left flex flex-col justify-between transition-all duration-150 cursor-pointer relative ${
                 isSelected
-                  ? 'bg-blue-50/50 border-blue-600 shadow-sm ring-1 ring-blue-600'
-                  : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/50'
+                  ? 'bg-blue-50/60 border-blue-500 ring-2 ring-blue-500/15 shadow-sm'
+                  : 'bg-white border-[#ECEEF2] hover:border-[#DDE1E8] hover:shadow-sm hover:bg-[#FAFBFC]'
               }`}
             >
-              <div className={`w-9 h-9 rounded-xl ${rc.color} flex items-center justify-center mb-3`}>
-                <Icon className="w-5 h-5" />
+              <div className="flex items-center justify-between w-full mb-3">
+                <div className={`w-8 h-8 rounded-xl ${rc.color} flex items-center justify-center`}>
+                  <Icon className="w-4 h-4" />
+                </div>
+                {isSelected && (
+                  <span className="w-2 h-2 rounded-full bg-blue-600" />
+                )}
               </div>
               <div>
-                <div className="font-bold text-xs text-slate-900 leading-tight">{rc.title}</div>
-                <div className="text-[10px] text-slate-400 mt-0.5">{rc.desc}</div>
+                <div className="font-bold text-xs leading-tight text-slate-900">
+                  {rc.title}
+                </div>
+                <div className="text-[10px] mt-0.5 text-slate-400">
+                  {rc.desc}
+                </div>
               </div>
             </button>
           );
@@ -173,7 +182,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
       </div>
 
       {/* Active Report Table */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs">
+      <div className="bg-white p-4.5 sm:p-5 rounded-2xl border border-[#ECEEF2] shadow-sm">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-base font-bold text-slate-900 capitalize">
             {selectedReport} Details

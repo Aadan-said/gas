@@ -148,7 +148,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ users, onLogin, language
         </form>
 
         {/* Demo Users */}
-        <div className="w-full mt-5 pt-4 text-left" style={{ borderTop: '1px solid #E2E6EF' }}>
+        <div className="w-full mt-5 pt-4 text-left" style={{ borderTop: '1px solid #ECEEF2' }}>
           <span className="text-[10px] font-bold uppercase tracking-wider block mb-2.5" style={{ color: '#94A3B8' }}>
             Quick Demo Access:
           </span>
@@ -161,14 +161,14 @@ export const LoginModal: React.FC<LoginModalProps> = ({ users, onLogin, language
                 className="p-2.5 rounded-xl text-left transition-all"
                 style={{
                   background: '#F8F9FC',
-                  border: '1px solid #E2E6EF'
+                  border: '1px solid #ECEEF2'
                 }}
                 onMouseEnter={e => {
                   (e.currentTarget as HTMLElement).style.borderColor = ROLE_COLORS[u.role] + '60';
                   (e.currentTarget as HTMLElement).style.background = ROLE_COLORS[u.role] + '10';
                 }}
                 onMouseLeave={e => {
-                  (e.currentTarget as HTMLElement).style.borderColor = '#E2E6EF';
+                  (e.currentTarget as HTMLElement).style.borderColor = '#ECEEF2';
                   (e.currentTarget as HTMLElement).style.background = '#F8F9FC';
                 }}
               >

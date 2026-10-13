@@ -110,7 +110,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
         {tanks.map(tank => {
           const pct = Math.round((tank.currentLevel / tank.capacity) * 100);
           return (
-            <div key={tank.id} className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs">
+            <div key={tank.id} className="bg-white p-4 rounded-2xl border border-[#ECEEF2] shadow-sm">
               <div className="flex items-center justify-between text-xs font-bold mb-2">
                 <span className="text-slate-800">{tank.name}</span>
                 <span className="text-blue-600">{pct}%</span>
@@ -127,21 +127,17 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
       </div>
 
       {/* Movements Table */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
-        <div className="flex items-center justify-between">
+      <div className="bg-white p-6 rounded-2xl border border-[#ECEEF2] shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <h2 className="text-base font-bold text-slate-900">
             Stock Movement Ledger (Audit Verified)
           </h2>
-          <div className="flex gap-2">
+          <div className="segmented-control">
             {['all', 'sale', 'delivery', 'adjustment'].map(f => (
               <button
                 key={f}
                 onClick={() => setFilterType(f)}
-                className={`px-3 py-1 rounded-lg text-xs font-bold capitalize transition-all ${
-                  filterType === f
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
+                className={`segmented-item capitalize ${filterType === f ? 'active' : ''}`}
               >
                 {f}
               </button>
