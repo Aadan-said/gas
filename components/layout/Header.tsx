@@ -8,7 +8,6 @@ import {
   WifiOff,
   Globe,
   ChevronDown,
-  UserCheck,
   Bell,
   Calendar,
   Clock,
@@ -17,7 +16,6 @@ import {
   X,
   Sparkles,
   LogOut,
-  Shield,
   KeyRound
 } from 'lucide-react';
 import { User, NetworkMode, UserRole } from '@/lib/types';
@@ -289,37 +287,7 @@ export const Header: React.FC<HeaderProps> = ({
                 </button>
               )}
 
-              <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                Switch Role / Operator
-              </div>
-              {users.map(u => {
-                const rs = ROLE_STYLES[u.role];
-                const isActive = u.id === currentUser.id;
-                return (
-                  <button
-                    key={u.id}
-                    onClick={() => { onUserChange(u); setUserDropdownOpen(false); }}
-                    className="w-full text-left px-3 py-2 rounded-xl flex items-center justify-between text-[12px] transition-all mb-0.5 cursor-pointer"
-                    style={isActive ? {
-                      background: '#F1F3F6',
-                      border: '1px solid #ECEEF2'
-                    } : { border: '1px solid transparent' }}
-                  >
-                    <div className="flex items-center gap-2">
-                      <UserCheck className="w-3.5 h-3.5 text-slate-400" />
-                      <span className={isActive ? 'font-bold text-slate-900' : 'text-slate-600'}>
-                        {u.name}
-                      </span>
-                    </div>
-                    <span
-                      className="text-[10px] px-1.5 py-0.5 rounded-full font-bold capitalize"
-                      style={{ color: rs.text, background: rs.bg }}
-                    >
-                      {u.role}
-                    </span>
-                  </button>
-                );
-              })}
+
 
               {onLogout && (
                 <div className="mt-2 pt-2 border-t border-slate-100">

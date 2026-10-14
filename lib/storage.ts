@@ -16,231 +16,190 @@ import {
 
 export const INITIAL_STATION: StationConfig = {
   id: 'st_001',
-  name: 'GasFlow Main Station',
-  branch: 'Mogadishu Central, KM4',
-  address: 'KM4 Junction, Airport Road, Mogadishu',
-  phone: '+252 61 5000000',
+  name: 'Kaalimaha Shidaalka Gaalkacyo',
+  branch: 'Gaalkacyo, Galmudug — Xaafadda Suuqa Weyn',
+  address: 'Wadada Boosaaso, Gaalkacyo Koonfur, Galmudug',
+  phone: '+252 090 2100000',
   taxRate: 0,
   currency: 'USD',
   currencySymbol: '$'
 };
 
-export const INITIAL_USERS: User[] = [
-  {
-    id: 'u_0',
-    name: 'Aadan Said',
-    username: 'aadan',
-    email: 'aadan@gasflow.so',
-    role: 'admin',
-    pin: 'aadan5754',
-    status: 'active',
-    lastLogin: 'Just now'
-  },
-  {
-    id: 'u_1',
-    name: 'Ahmed Ali',
-    username: 'admin',
-    email: 'admin@gasflow.so',
-    role: 'admin',
-    pin: '1234',
-    status: 'active',
-    lastLogin: 'Today, 09:12 AM'
-  },
-  {
-    id: 'u_2',
-    name: 'Fartuun Mohamed',
-    username: 'fartuun',
-    email: 'fartuun@gasflow.so',
-    role: 'cashier',
-    pin: '1111',
-    status: 'active',
-    lastLogin: 'Today, 10:15 AM'
-  },
-  {
-    id: 'u_3',
-    name: 'Ali Hassan',
-    username: 'manager',
-    email: 'manager@gasflow.so',
-    role: 'manager',
-    pin: '2222',
-    status: 'active',
-    lastLogin: 'Today, 08:45 AM'
-  },
-  {
-    id: 'u_4',
-    name: 'Sahra Yusuf',
-    username: 'accountant',
-    email: 'accountant@gasflow.so',
-    role: 'accountant',
-    pin: '3333',
-    status: 'active',
-    lastLogin: 'Yesterday, 04:30 PM'
-  }
-];
+export const INITIAL_USERS: User[] = [];
 
 export const INITIAL_TANKS: Tank[] = [
   {
     id: 't_1',
     tankNumber: 'T-01',
     fuelType: 'PMS',
-    name: 'Petrol (PMS)',
+    name: 'Baasiin (PMS)',
     capacity: 10000,
     currentLevel: 6780,
-    unitPrice: 1.70,
+    unitPrice: 1.19,   // Qiimaha suuqa Gaalkacyo ($1.19 / Litir)
     minThreshold: 2000,
     status: 'normal',
-    lastCalibrated: '2025-04-28'
+    lastCalibrated: '2026-10-10'
   },
   {
     id: 't_2',
     tankNumber: 'T-02',
     fuelType: 'AGO',
-    name: 'Diesel (AGO)',
+    name: 'Naafto (AGO)',
     capacity: 10000,
     currentLevel: 4190,
-    unitPrice: 1.50,
+    unitPrice: 1.20,   // Qiimaha suuqa Gaalkacyo ($1.20 / Litir)
     minThreshold: 2000,
     status: 'normal',
-    lastCalibrated: '2025-04-28'
+    lastCalibrated: '2026-10-10'
   },
   {
     id: 't_3',
     tankNumber: 'T-03',
     fuelType: 'DPK',
-    name: 'Kerosene (DPK)',
+    name: 'Gaas Cad (DPK)',
     capacity: 10000,
-    currentLevel: 8500,
-    unitPrice: 1.80,
+    currentLevel: 5200,
+    unitPrice: 0.94,   // Qiimaha suuqa Gaalkacyo ($0.94 / Litir)
     minThreshold: 2000,
     status: 'normal',
-    lastCalibrated: '2025-04-27'
+    lastCalibrated: '2026-10-09'
   },
   {
     id: 't_4',
     tankNumber: 'T-04',
     fuelType: 'LPG',
-    name: 'LPG Gas',
+    name: 'Gaaska LPG (Dhululubo)',
     capacity: 10000,
-    currentLevel: 7600,
-    unitPrice: 1.20,
+    currentLevel: 3800,
+    unitPrice: 20.00,  // Qiimaha suuqa Gaalkacyo ($20.00 / Dhululubo)
     minThreshold: 2000,
     status: 'normal',
-    lastCalibrated: '2025-04-26'
+    lastCalibrated: '2026-10-08'
   }
 ];
 
 export const INITIAL_CUSTOMERS: Customer[] = [
   {
     id: 'c_1',
-    name: 'Mohamed Hassan',
-    phone: '+252 61 2345678',
-    company: 'Hassan Transport Co.',
+    name: 'Cabdirashiid Xasan Nuur',
+    phone: '+252 090 2110001',
+    company: 'Nuur Transport Gaalkacyo',
     creditLimit: 500,
-    currentBalance: 45.00,
+    currentBalance: 85.00,
     status: 'active',
-    createdAt: '2025-01-15'
+    createdAt: '2026-09-01'
   },
   {
     id: 'c_2',
-    name: 'Amina Farah',
-    phone: '+252 61 3456789',
-    company: 'Blue Sky Logistics',
+    name: 'Faadumo Cabdi Warsame',
+    phone: '+252 090 2120002',
+    company: 'Warsame Logistics Galmudug',
     creditLimit: 300,
     currentBalance: 0.00,
     status: 'active',
-    createdAt: '2025-02-10'
+    createdAt: '2026-09-10'
   },
   {
     id: 'c_3',
-    name: 'Abdirahman Ali',
-    phone: '+252 61 4567890',
-    company: 'Somali Express Fleet',
+    name: 'Axmed Cali Dheere',
+    phone: '+252 090 2130003',
+    company: 'Dheere Fleet Services',
     creditLimit: 1000,
-    currentBalance: 120.00,
+    currentBalance: 230.00,
     status: 'active',
-    createdAt: '2025-03-01'
+    createdAt: '2026-08-15'
   },
   {
     id: 'c_4',
-    name: 'Hodan Yusuf',
-    phone: '+252 61 5678901',
-    company: 'Banadir Delivery',
-    creditLimit: 200,
-    currentBalance: 30.00,
+    name: 'Saado Maxamed Guure',
+    phone: '+252 090 2140004',
+    company: 'Guure Guri-Dhis Construction',
+    creditLimit: 800,
+    currentBalance: 55.00,
     status: 'active',
-    createdAt: '2025-03-20'
+    createdAt: '2026-09-20'
+  },
+  {
+    id: 'c_5',
+    name: 'Muuse Ibraahim Cumar',
+    phone: '+252 090 2150005',
+    company: 'Galmudug Gaari Raac',
+    creditLimit: 600,
+    currentBalance: 0.00,
+    status: 'active',
+    createdAt: '2026-10-01'
   }
 ];
 
 export const INITIAL_SALES: Sale[] = [
   {
     id: 'sale_101',
-    saleNumber: 'GF-2025-001',
+    saleNumber: 'KSG-2026-001',
     stationId: 'st_001',
     deviceId: 'DEV-POS-01',
     cashierId: 'u_2',
-    cashierName: 'Fartuun Mohamed',
+    cashierName: 'Caasho Cumar',
     fuelType: 'PMS',
     tankId: 't_1',
-    litres: 20.00,
-    unitPrice: 1.70,
-    totalAmount: 34.00,
-    paymentMethod: 'cash',
+    litres: 25.00,
+    unitPrice: 1.85,
+    totalAmount: 46.25,
+    paymentMethod: 'sahal',   // Golis Sahal — ugu badan Gaalkacyo
     paymentStatus: 'paid',
-    createdAt: '2025-04-29T10:15:00.000Z',
+    createdAt: '2026-10-14T07:30:00.000Z',
     syncStatus: 'synced'
   },
   {
     id: 'sale_102',
-    saleNumber: 'GF-2025-002',
+    saleNumber: 'KSG-2026-002',
     stationId: 'st_001',
     deviceId: 'DEV-POS-01',
     cashierId: 'u_2',
-    cashierName: 'Fartuun Mohamed',
+    cashierName: 'Caasho Cumar',
     fuelType: 'AGO',
     tankId: 't_2',
-    litres: 19.00,
-    unitPrice: 1.50,
-    totalAmount: 28.50,
-    paymentMethod: 'evc',
+    litres: 30.00,
+    unitPrice: 1.65,
+    totalAmount: 49.50,
+    paymentMethod: 'cash',
     paymentStatus: 'paid',
-    createdAt: '2025-04-29T09:45:00.000Z',
+    createdAt: '2026-10-14T08:00:00.000Z',
     syncStatus: 'synced'
   },
   {
     id: 'sale_103',
-    saleNumber: 'GF-2025-003',
+    saleNumber: 'KSG-2026-003',
     stationId: 'st_001',
-    deviceId: 'DEV-POS-02',
+    deviceId: 'DEV-POS-01',
     cashierId: 'u_2',
-    cashierName: 'Fartuun Mohamed',
+    cashierName: 'Caasho Cumar',
     fuelType: 'LPG',
     tankId: 't_4',
-    litres: 15.00,
-    unitPrice: 1.20,
-    totalAmount: 18.00,
-    paymentMethod: 'cash',
+    litres: 20.00,
+    unitPrice: 1.30,
+    totalAmount: 26.00,
+    paymentMethod: 'sahal',
     paymentStatus: 'paid',
-    createdAt: '2025-04-29T09:12:00.000Z',
+    createdAt: '2026-10-14T09:00:00.000Z',
     syncStatus: 'synced'
   },
   {
     id: 'sale_104',
-    saleNumber: 'GF-2025-004',
+    saleNumber: 'KSG-2026-004',
     stationId: 'st_001',
     deviceId: 'DEV-POS-01',
     cashierId: 'u_2',
-    cashierName: 'Fartuun Mohamed',
+    cashierName: 'Caasho Cumar',
     customerId: 'c_3',
-    customerName: 'Abdirahman Ali',
+    customerName: 'Axmed Cali Dheere',
     fuelType: 'PMS',
     tankId: 't_1',
-    litres: 50.00,
-    unitPrice: 1.70,
-    totalAmount: 85.00,
+    litres: 60.00,
+    unitPrice: 1.85,
+    totalAmount: 111.00,
     paymentMethod: 'credit',
     paymentStatus: 'paid',
-    createdAt: '2025-04-29T08:30:00.000Z',
+    createdAt: '2026-10-14T09:45:00.000Z',
     syncStatus: 'synced'
   }
 ];
@@ -249,38 +208,38 @@ export const INITIAL_EXPENSES: Expense[] = [
   {
     id: 'exp_1',
     category: 'Office Supplies',
-    description: 'Receipt rolls & printer ribbon',
-    amount: 50.00,
-    addedBy: 'Ahmed Ali',
-    receiptNumber: 'REC-901',
-    createdAt: '2025-04-28'
+    description: 'Rasiidyo & Daabacan tartanka',
+    amount: 40.00,
+    addedBy: 'Caasho Cumar',
+    receiptNumber: 'KSG-REC-001',
+    createdAt: '2026-10-13'
   },
   {
     id: 'exp_2',
     category: 'Maintenance',
-    description: 'Nozzle calibration and filter service',
-    amount: 120.00,
-    addedBy: 'Ali Hassan',
-    receiptNumber: 'REC-902',
-    createdAt: '2025-04-28'
+    description: 'Dayactirka dhuumaha & fooldiga',
+    amount: 150.00,
+    addedBy: 'Cali Warsame',
+    receiptNumber: 'KSG-REC-002',
+    createdAt: '2026-10-12'
   },
   {
     id: 'exp_3',
     category: 'Electricity',
-    description: 'Station generator fuel & utility bill',
-    amount: 80.00,
-    addedBy: 'Ahmed Ali',
-    receiptNumber: 'REC-903',
-    createdAt: '2025-04-27'
+    description: 'Shidaalka jeneretarka & biilka korontada',
+    amount: 95.00,
+    addedBy: 'Caasho Cumar',
+    receiptNumber: 'KSG-REC-003',
+    createdAt: '2026-10-11'
   },
   {
     id: 'exp_4',
     category: 'Salaries',
-    description: 'Weekly pump attendant staff advances',
-    amount: 500.00,
-    addedBy: 'Ahmed Ali',
-    receiptNumber: 'REC-904',
-    createdAt: '2025-04-26'
+    description: 'Mushaarka toddobaadlaha shaqaalaha dhuumaha',
+    amount: 480.00,
+    addedBy: 'Caasho Cumar',
+    receiptNumber: 'KSG-REC-004',
+    createdAt: '2026-10-10'
   }
 ];
 
@@ -290,28 +249,28 @@ export const INITIAL_DELIVERIES: FuelDelivery[] = [
     tankId: 't_1',
     fuelType: 'PMS',
     litres: 5000,
-    costPerLitre: 1.45,
-    totalCost: 7250,
-    supplier: 'Hass Petroleum Somalia',
-    invoiceNumber: 'HASS-2025-881',
-    receivedBy: 'Ali Hassan',
-    receivedAt: '2025-04-26',
-    dipstickBefore: 2100,
-    dipstickAfter: 7100
+    costPerLitre: 1.58,
+    totalCost: 7900,
+    supplier: 'Puntland Petroleum Boosaaso',
+    invoiceNumber: 'PPB-2026-441',
+    receivedBy: 'Cali Warsame',
+    receivedAt: '2026-10-08',
+    dipstickBefore: 1900,
+    dipstickAfter: 6900
   },
   {
     id: 'del_2',
     tankId: 't_2',
     fuelType: 'AGO',
     litres: 4000,
-    costPerLitre: 1.30,
-    totalCost: 5200,
-    supplier: 'Mogadishu Fuel Terminals',
-    invoiceNumber: 'MFT-9912',
-    receivedBy: 'Ali Hassan',
-    receivedAt: '2025-04-25',
-    dipstickBefore: 1200,
-    dipstickAfter: 5200
+    costPerLitre: 1.40,
+    totalCost: 5600,
+    supplier: 'Galmudug Fuel Depot',
+    invoiceNumber: 'GFD-2026-192',
+    receivedBy: 'Cali Warsame',
+    receivedAt: '2026-10-07',
+    dipstickBefore: 800,
+    dipstickAfter: 4800
   }
 ];
 
@@ -359,90 +318,67 @@ export interface AppState {
   activeDeviceId: string;
 }
 
-const STORAGE_KEY = 'gasflow_app_state_v2';
+const STORAGE_KEY = 'gasflow_app_state_v3';
+const DEVICE_KEY = 'gasflow_device_id';
 
-export function getInitialState(): AppState {
-  if (typeof window === 'undefined') {
-    return {
-      station: INITIAL_STATION,
-      currentUser: INITIAL_USERS[0],
-      users: INITIAL_USERS,
-      tanks: INITIAL_TANKS,
-      sales: INITIAL_SALES,
-      deliveries: INITIAL_DELIVERIES,
-      movements: [],
-      customers: INITIAL_CUSTOMERS,
-      customerPayments: [],
-      expenses: INITIAL_EXPENSES,
-      auditLogs: [
-        {
-          id: 'log_1',
-          userId: 'u_1',
-          userName: 'Ahmed Ali',
-          action: 'SYSTEM_INIT',
-          details: 'GasFlow station management initialized with offline-first engine.',
-          createdAt: '2025-04-29T08:00:00.000Z'
-        }
-      ],
-      syncEvents: INITIAL_SYNC_EVENTS,
-      networkMode: 'cloud_online',
-      activeDeviceId: 'DEV-POS-01'
-    };
-  }
-
+export function getDeviceId(): string {
+  if (typeof window === 'undefined') return 'DEV-SERVER';
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      const existingUserIds = new Set((parsed.users || []).map((u: User) => u.id));
-      const mergedUsers = [
-        ...(parsed.users || []),
-        ...INITIAL_USERS.filter(u => !existingUserIds.has(u.id))
-      ];
-      return {
-        ...parsed,
-        users: mergedUsers,
-        currentUser: parsed.currentUser || INITIAL_USERS[0]
-      };
+    let id = localStorage.getItem(DEVICE_KEY);
+    if (!id) {
+      const rand = Math.random().toString(36).slice(2, 10).toUpperCase();
+      id = `DEV-${rand}`;
+      localStorage.setItem(DEVICE_KEY, id);
     }
-  } catch (err) {
-    console.error('Failed to parse GasFlow stored state:', err);
+    return id;
+  } catch {
+    return 'DEV-POS-01';
   }
+}
 
+export function emptyAppState(): AppState {
   return {
-    station: INITIAL_STATION,
-    currentUser: INITIAL_USERS[0],
-    users: INITIAL_USERS,
-    tanks: INITIAL_TANKS,
-    sales: INITIAL_SALES,
-    deliveries: INITIAL_DELIVERIES,
+    station: {
+      id: '',
+      name: 'GasFlow Station',
+      branch: '',
+      address: '',
+      phone: '',
+      taxRate: 0,
+      currency: 'USD',
+      currencySymbol: '$'
+    },
+    currentUser: null,
+    users: [],
+    tanks: [],
+    sales: [],
+    deliveries: [],
     movements: [],
-    customers: INITIAL_CUSTOMERS,
+    customers: [],
     customerPayments: [],
-    expenses: INITIAL_EXPENSES,
-    auditLogs: [
-      {
-        id: 'log_1',
-        userId: 'u_1',
-        userName: 'Ahmed Ali',
-        action: 'SYSTEM_INIT',
-        details: 'GasFlow station management initialized with offline-first engine.',
-        createdAt: '2025-04-29T08:00:00.000Z'
-      }
-    ],
-    syncEvents: INITIAL_SYNC_EVENTS,
+    expenses: [],
+    auditLogs: [],
+    syncEvents: [],
     networkMode: 'cloud_online',
-    activeDeviceId: 'DEV-POS-01'
+    activeDeviceId: typeof window === 'undefined' ? 'DEV-SERVER' : getDeviceId()
   };
 }
 
+export function getInitialState(): AppState {
+  return emptyAppState();
+}
+
 export function saveState(state: AppState) {
-  if (typeof window !== 'undefined') {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    } catch (e) {
-      console.error('Failed to save GasFlow state:', e);
-    }
+  if (typeof window === 'undefined') return;
+  try {
+    const orgId = state.currentUser?.organizationId || state.station.id;
+    if (!orgId) return;
+    localStorage.setItem(`${STORAGE_KEY}_${orgId}`, JSON.stringify({
+      ...state,
+      currentUser: state.currentUser
+    }));
+  } catch (e) {
+    console.error('Failed to save GasFlow state:', e);
   }
 }
 

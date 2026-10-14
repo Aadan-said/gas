@@ -31,6 +31,7 @@ export interface SessionPayload {
   role: UserRole;
   name: string;
   stationId: string;
+  organizationId: string;
   deviceId: string;
   iat?: number;
   exp?: number;
@@ -123,3 +124,106 @@ export function buildCookieOptions(maxAgeSeconds = 8 * 60 * 60) {
     maxAge: maxAgeSeconds,
   };
 }
+
+// ─── Request Authentication & Authorization Guard ────────────────────────────
+
+export async function authenticateRequest(
+  req: import('next/server').NextRequest,
+  options?: {
+    allowedRoles?: UserRole[];
+    permission?: Permission;
+  }
+): Promise<
+  | { session: SessionPayload; user: User; errorResponse: null }
+  | { session: null; user: null; errorResponse: import('next/server').NextResponse }
+> {
+  const { NextResponse } = await import('next/server');
+  const cookieToken = req.cookies.get(AUTH_COOKIE_NAME)?.value;
+  const bearerToken = req.headers.get('authorization')?.replace('Bearer ', '');
+  const token = cookieToken || bearerToken;
+
+  if (!token) {
+    return {
+      session: null,
+      user: null,
+      errorResponse: NextResponse.json({ error: 'Authentication required. Please log in.' }, { status: 401 })
+    };
+  }
+
+  const session = await verifyToken(token);
+  if (!session) {
+    return {
+      session: null,
+      user: null,
+      errorResponse: NextResponse.json({ error: 'Session expired. Please log in again.' }, { status: 401 })
+    };
+  }
+
+  // Verify account status in server database
+  const { findUserById } = await import('./server-db');
+  const dbUser = await findUserById(session.userId);
+
+  if (!dbUser) {
+    return {
+      session: null,
+      user: null,
+      errorResponse: NextResponse.json({ error: 'Account not found or has been revoked.' }, { status: 401 })
+    };
+  }
+
+  if (dbUser.status === 'inactive') {
+    return {
+      session: null,
+      user: null,
+      errorResponse: NextResponse.json(
+        { error: 'Account is inactive. Please contact station administrator.' },
+        { status: 403 }
+      )
+    };
+  }
+
+  // Role check
+  if (options?.allowedRoles && !options.allowedRoles.includes(session.role)) {
+    return {
+      session: null,
+      user: null,
+      errorResponse: NextResponse.json(
+        { error: `Insufficient permissions. Operation requires role: ${options.allowedRoles.join(', ')}.` },
+        { status: 403 }
+      )
+    };
+  }
+
+  // Granular permission check
+  if (options?.permission && !hasPermission(session.role, options.permission)) {
+    return {
+      session: null,
+      user: null,
+      errorResponse: NextResponse.json(
+        { error: `Insufficient permissions. Operation requires: ${options.permission}.` },
+        { status: 403 }
+      )
+    };
+  }
+
+  const organizationId = dbUser.organizationId || session.stationId;
+  session.stationId = organizationId;
+  session.organizationId = organizationId;
+
+  const sanitizedUser: User = {
+    id: dbUser.id,
+    name: dbUser.name,
+    username: dbUser.username,
+    email: dbUser.email,
+    role: dbUser.role,
+    status: dbUser.status,
+    phone: dbUser.phone,
+    branch: dbUser.branch,
+    pin: '****',
+    lastLogin: dbUser.lastLogin,
+    organizationId
+  };
+
+  return { session, user: sanitizedUser, errorResponse: null };
+}
+

@@ -11,6 +11,9 @@ import { verifyToken, AUTH_COOKIE_NAME } from '@/lib/auth';
 const PUBLIC_API_ROUTES = [
   '/api/auth/login',
   '/api/auth/register',
+  '/api/auth/setup',
+  '/api/auth/setup-status',
+  '/api/state',
   '/api/health',
 ];
 
@@ -22,9 +25,17 @@ export async function proxy(req: NextRequest) {
     return NextResponse.next();
   }
 
+  // Sanitize incoming untrusted identity headers
+  const sanitizedHeaders = new Headers(req.headers);
+  sanitizedHeaders.delete('x-user-id');
+  sanitizedHeaders.delete('x-user-role');
+  sanitizedHeaders.delete('x-user-name');
+  sanitizedHeaders.delete('x-station-id');
+  sanitizedHeaders.delete('x-device-id');
+
   // Allow public routes through
   if (PUBLIC_API_ROUTES.some(route => pathname.startsWith(route))) {
-    return NextResponse.next();
+    return NextResponse.next({ request: { headers: sanitizedHeaders } });
   }
 
   // Extract token from cookie or Authorization header

@@ -55,12 +55,17 @@ export const SalesPOSView: React.FC<SalesPOSViewProps> = ({
 
   // POS State
   const [selectedFuel, setSelectedFuel] = useState<FuelTypeCode>('PMS');
-  const [selectedPayment, setSelectedPayment] = useState<PaymentMethod>('cash');
+  const [selectedPayment, setSelectedPayment] = useState<PaymentMethod>('sahal');
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
   const [quantityInput, setQuantityInput] = useState<string>('20');
   const [unit, setUnit] = useState<'L' | 'Gal'>('L');
   const [voidModalSale, setVoidModalSale] = useState<Sale | null>(null);
   const [voidReason, setVoidReason] = useState<string>('');
+
+  // Role-based data isolation: cashiers only see their own sales
+  const visibleSales = currentUser.role === 'cashier'
+    ? sales.filter(s => s.cashierId === currentUser.id)
+    : sales;
 
   // Find active tank
   const currentTank = tanks.find(t => t.fuelType === selectedFuel) || tanks[0];
@@ -130,13 +135,17 @@ export const SalesPOSView: React.FC<SalesPOSViewProps> = ({
 
     // Reset default
     setQuantityInput('20');
+    setSelectedPayment('sahal');
   };
 
-  const fuelTypes: { code: FuelTypeCode; name: string; somaliName: string; price: number; color: string }[] = [
-    { code: 'PMS', name: 'Petrol (PMS)', somaliName: 'Baasiin', price: 1.70, color: 'emerald' },
-    { code: 'AGO', name: 'Diesel (AGO)', somaliName: 'Naafto', price: 1.50, color: 'amber' },
-    { code: 'DPK', name: 'Kerosene (DPK)', somaliName: 'Gaas Cad', price: 1.80, color: 'blue' },
-    { code: 'LPG', name: 'LPG Gas', somaliName: 'Gaaska LPG', price: 1.20, color: 'purple' }
+  const isLPG = selectedFuel === 'LPG';
+  const effectiveUnit = isLPG ? (language === 'so' ? 'Dhululubo' : 'Cyl') : unit;
+
+  const fuelTypes: { code: FuelTypeCode; name: string; somaliName: string; price: number; color: string; unitLabel: string }[] = [
+    { code: 'PMS', name: language === 'so' ? 'Baasiin (PMS)' : 'Petrol (PMS)', somaliName: 'Baasiin', price: 1.19, color: 'emerald', unitLabel: '/L' },
+    { code: 'AGO', name: language === 'so' ? 'Naafto (AGO)' : 'Diesel (AGO)', somaliName: 'Naafto', price: 1.20, color: 'amber', unitLabel: '/L' },
+    { code: 'DPK', name: language === 'so' ? 'Gaas Cad (DPK)' : 'Kerosene (DPK)', somaliName: 'Gaas Cad', price: 0.94, color: 'blue', unitLabel: '/L' },
+    { code: 'LPG', name: language === 'so' ? 'Gaaska LPG (Dhululubo)' : 'LPG Gas (Cylinder)', somaliName: 'Gaaska LPG', price: 20.00, color: 'purple', unitLabel: language === 'so' ? '/Dhululubo' : '/Cyl' }
   ];
 
   return (
@@ -198,10 +207,10 @@ export const SalesPOSView: React.FC<SalesPOSViewProps> = ({
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
               {[
-                { id: 'cash', label: t.cash, icon: Banknote },
+                { id: 'sahal', label: t.sahal, icon: Zap },
                 { id: 'evc', label: t.evcPlus, icon: Phone },
                 { id: 'edahab', label: t.edahab, icon: Phone },
-                { id: 'sahal', label: t.sahal, icon: Zap },
+                { id: 'cash', label: t.cash, icon: Banknote },
                 { id: 'credit', label: t.other, icon: Coins },
                 { id: 'card', label: t.card, icon: CreditCard }
               ].map(pm => {
@@ -269,10 +278,10 @@ export const SalesPOSView: React.FC<SalesPOSViewProps> = ({
                     <div>
                       <div className="text-xs font-bold text-slate-800">{f.name}</div>
                       <div className="text-sm font-black text-blue-600 mt-1">
-                        ${price.toFixed(2)}/L
+                        ${price.toFixed(2)}{f.unitLabel}
                       </div>
                       <div className="text-[10px] text-slate-400 mt-0.5">
-                        Stock: {tank ? tank.currentLevel.toLocaleString() : 0} L
+                        {language === 'so' ? 'Kaydka:' : 'Stock:'} {tank ? tank.currentLevel.toLocaleString() : 0} {f.code === 'LPG' ? (language === 'so' ? 'Dhululubo' : 'Cyl') : 'L'}
                       </div>
                     </div>
                   </button>
@@ -285,28 +294,34 @@ export const SalesPOSView: React.FC<SalesPOSViewProps> = ({
           <div>
             <div className="flex items-center justify-between mb-2">
               <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">
-                {t.quantityLitres}
+                {isLPG ? (language === 'so' ? 'Tirada (Dhululubo)' : 'Quantity (Cylinders)') : t.quantityLitres}
               </label>
-              <div className="flex bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-xs">
-                <button
-                  type="button"
-                  onClick={() => setUnit('L')}
-                  className={`px-3 py-1 font-bold rounded-md transition-all ${
-                    unit === 'L' ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-500'
-                  }`}
-                >
-                  Litres (L)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setUnit('Gal')}
-                  className={`px-3 py-1 font-bold rounded-md transition-all ${
-                    unit === 'Gal' ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-500'
-                  }`}
-                >
-                  Gallons (Gal)
-                </button>
-              </div>
+              {!isLPG ? (
+                <div className="flex bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setUnit('L')}
+                    className={`px-3 py-1 font-bold rounded-md transition-all ${
+                      unit === 'L' ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-500'
+                    }`}
+                  >
+                    Litres (L)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setUnit('Gal')}
+                    className={`px-3 py-1 font-bold rounded-md transition-all ${
+                      unit === 'Gal' ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-500'
+                    }`}
+                  >
+                    Gallons (Gal)
+                  </button>
+                </div>
+              ) : (
+                <span className="px-3 py-1 font-bold rounded-md bg-purple-50 text-purple-700 text-xs border border-purple-200">
+                  {language === 'so' ? 'Dhululubo Gas ah ($20)' : 'Cylinder ($20/ea)'}
+                </span>
+              )}
             </div>
 
             <div className="relative">
@@ -320,28 +335,28 @@ export const SalesPOSView: React.FC<SalesPOSViewProps> = ({
                 className="w-full bg-slate-50 focus:bg-white text-slate-900 text-2xl font-black px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
               />
               <span className="absolute right-4 top-1/2 -translate-y-1/2 font-bold text-slate-400 text-sm">
-                {unit}
+                {effectiveUnit}
               </span>
             </div>
 
-            {/* Quick Litre Presets */}
+            {/* Quick Presets */}
             <div className="flex flex-wrap gap-2 mt-3">
               <span className="text-[11px] font-bold text-slate-400 self-center mr-1">
-                Presets:
+                {language === 'so' ? 'Xulasho Dhaqso ah:' : 'Presets:'}
               </span>
-              {[10, 20, 50, 100].map(p => (
+              {(isLPG ? [1, 2, 3, 5, 10] : [10, 20, 50, 100]).map(p => (
                 <button
                   key={p}
                   type="button"
                   onClick={() => handlePresetLitres(p)}
                   className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200/80 text-slate-700 font-bold text-xs rounded-lg transition-all"
                 >
-                  {p}L
+                  {p}{isLPG ? (language === 'so' ? ' Dhululubo' : ' Cyl') : 'L'}
                 </button>
               ))}
               <div className="h-5 w-px bg-slate-200 mx-1 self-center" />
               {/* Dollar presets */}
-              {[10, 20, 50].map(d => (
+              {(isLPG ? [20, 40, 60, 100] : [10, 20, 50]).map(d => (
                 <button
                   key={d}
                   type="button"
@@ -368,16 +383,18 @@ export const SalesPOSView: React.FC<SalesPOSViewProps> = ({
                 <span className="font-bold text-slate-800">{currentTank.name}</span>
               </div>
               <div className="flex items-center justify-between text-slate-500">
-                <span>{t.litres}</span>
-                <span className="font-bold text-slate-800">{litres.toFixed(2)} L</span>
+                <span>{isLPG ? (language === 'so' ? 'Dhululubo' : 'Cylinders') : t.litres}</span>
+                <span className="font-bold text-slate-800">
+                  {litres.toFixed(isLPG ? 0 : 2)} {effectiveUnit}
+                </span>
               </div>
               <div className="flex items-center justify-between text-slate-500">
                 <span>{t.unitPrice}</span>
-                <span className="font-bold text-slate-800">${unitPrice.toFixed(2)}</span>
+                <span className="font-bold text-slate-800">${unitPrice.toFixed(2)}{isLPG ? (language === 'so' ? '/Dhululubo' : '/Cyl') : '/L'}</span>
               </div>
               <div className="flex items-center justify-between text-slate-500">
                 <span>{language === 'so' ? 'Habka lacagta' : 'Payment'}</span>
-                <span className="font-bold text-blue-600 uppercase">{selectedPayment}</span>
+                <span className="font-bold text-blue-600 uppercase">{selectedPayment === 'sahal' ? 'Golis Sahal' : selectedPayment}</span>
               </div>
               {activeCustomer && (
                 <div className="flex items-center justify-between text-slate-500">
@@ -396,7 +413,7 @@ export const SalesPOSView: React.FC<SalesPOSViewProps> = ({
                 ${totalAmount.toFixed(2)}
               </div>
               <span className="text-[11px] text-slate-400 font-medium block mt-1">
-                Tank Stock Remaining: {(currentTank.currentLevel - litres).toLocaleString()} L
+                {language === 'so' ? 'Shidaalka ku haraya haanta:' : 'Tank Stock Remaining:'} {(currentTank.currentLevel - litres).toLocaleString()} {isLPG ? (language === 'so' ? 'Dhululubo' : 'Cyl') : 'L'}
               </span>
             </div>
           </div>
@@ -426,7 +443,7 @@ export const SalesPOSView: React.FC<SalesPOSViewProps> = ({
             </p>
           </div>
           <span className="text-xs font-bold px-2.5 py-1 bg-slate-100 text-slate-700 rounded-lg">
-            {sales.length} {language === 'so' ? 'Iib' : 'Transactions'}
+            {visibleSales.length} {language === 'so' ? 'Iib' : 'Transactions'}
           </span>
         </div>
 
@@ -446,7 +463,7 @@ export const SalesPOSView: React.FC<SalesPOSViewProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 font-medium">
-              {sales.map(sale => {
+              {visibleSales.map(sale => {
                 const isVoided = sale.paymentStatus === 'voided';
                 return (
                   <tr

@@ -60,11 +60,24 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const t = translations[language];
   const [salesTimeframe, setSalesTimeframe] = useState<'today' | 'week' | 'month'>('today');
 
-  const activeSales = sales.filter(s => s.paymentStatus === 'paid');
+  // Role-specific data isolation: cashiers only see their own shift sales
+  const roleSales = currentUser.role === 'cashier'
+    ? sales.filter(s => s.cashierId === currentUser.id)
+    : sales;
+
+  const activeSales = roleSales.filter(s => s.paymentStatus === 'paid');
   const totalSalesAmount   = activeSales.reduce((a, c) => a + c.totalAmount, 0);
   const totalLitresSold    = activeSales.reduce((a, c) => a + c.litres, 0);
   const cashSales          = activeSales.filter(s => s.paymentMethod === 'cash').reduce((a, c) => a + c.totalAmount, 0);
   const totalTransactions  = activeSales.length;
+
+  const roleConfig: Record<string, { label: string; color: string; bg: string }> = {
+    admin:      { label: language === 'so' ? 'Maamule' : 'Administrator', color: '#2563EB', bg: '#EFF6FF' },
+    manager:    { label: language === 'so' ? 'Maamulle' : 'Manager',       color: '#7C3AED', bg: '#F5F3FF' },
+    cashier:    { label: language === 'so' ? 'Cashier' : 'Cashier',        color: '#059669', bg: '#ECFDF5' },
+    accountant: { label: language === 'so' ? 'Xisaabiye' : 'Accountant',   color: '#D97706', bg: '#FFFBEB' },
+  };
+  const rConf = roleConfig[currentUser.role] || roleConfig.cashier;
 
   // Hourly curve data for modern SVG line / area chart
   const hourlyPoints = [
@@ -142,13 +155,26 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       {/* 1. FlowAI & CloseCRM Welcome Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
+          <div className="flex items-center gap-2.5 mb-1">
+            <span
+              className="inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wide"
+              style={{ background: rConf.bg, color: rConf.color }}
+            >
+              <span className="w-1.5 h-1.5 rounded-full" style={{ background: rConf.color }} />
+              {rConf.label}
+            </span>
+          </div>
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#0F172A]">
             {t.welcomeGreeting}, <span className="text-slate-900">{currentUser.name}</span>!
           </h1>
           <p className="text-xs sm:text-[13px] text-slate-500 mt-0.5">
-            {language === 'so'
-              ? 'Xarunta kormeerka dhuumaha, haamaha shidaalka iyo dhaqdhaqaaqa iibka xilligan.'
-              : 'Real-time telemetry, automated tank monitoring, and POS operations.'}
+            {currentUser.role === 'cashier'
+              ? (language === 'so'
+                  ? 'Xogta muujinaysa waa iibkaaga shiftkaaga. Shidaalka shub oo rasiidhada soo qaad.'
+                  : 'Showing your shift sales only. Process fuel sales and issue receipts.')
+              : (language === 'so'
+                  ? 'Xarunta kormeerka dhuumaha, haamaha shidaalka iyo dhaqdhaqaaqa iibka xilligan.'
+                  : 'Real-time telemetry, automated tank monitoring, and POS operations.')}
           </p>
         </div>
 
@@ -380,10 +406,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           {/* Donut Legend List */}
           <div className="space-y-2 pt-2 border-t border-[#F1F3F6]">
             {[
-              { label: 'Petrol (PMS)', pct: pmsPct, color: '#10B981', code: 'PMS' },
-              { label: 'Diesel (AGO)', pct: agoPct, color: '#F59E0B', code: 'AGO' },
-              { label: 'Kerosene (DPK)', pct: dpkPct, color: '#3B82F6', code: 'DPK' },
-              { label: 'LPG Gas', pct: lpgPct, color: '#8B5CF6', code: 'LPG' },
+              { label: language === 'so' ? 'Baasiin (PMS)' : 'Petrol (PMS)', pct: pmsPct, color: '#10B981', code: 'PMS' },
+              { label: language === 'so' ? 'Naafto (AGO)' : 'Diesel (AGO)', pct: agoPct, color: '#F59E0B', code: 'AGO' },
+              { label: language === 'so' ? 'Gaas Cad (DPK)' : 'Kerosene (DPK)', pct: dpkPct, color: '#3B82F6', code: 'DPK' },
+              { label: language === 'so' ? 'Gaaska LPG' : 'LPG Gas', pct: lpgPct, color: '#8B5CF6', code: 'LPG' },
             ].map((f, i) => (
               <div key={i} className="flex items-center justify-between text-xs">
                 <div className="flex items-center gap-2">
@@ -437,7 +463,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 </tr>
               </thead>
               <tbody>
-                {sales.slice(0, 5).map(sale => {
+                {roleSales.slice(0, 5).map(sale => {
                   const fc = FUEL_COLORS[sale.fuelType] || FUEL_COLORS.PMS;
                   const pm = PAYMENT_COLORS[sale.paymentMethod] || PAYMENT_COLORS.cash;
                   const timeStr = new Date(sale.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -495,10 +521,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   );
                 })}
 
-                {sales.length === 0 && (
+                {roleSales.length === 0 && (
                   <tr>
                     <td colSpan={6} className="text-center py-8 text-slate-400 text-xs">
-                      No sales recorded yet. Click &quot;+ New Sale&quot; to begin.
+                      {currentUser.role === 'cashier'
+                        ? (language === 'so' ? 'Wali iib kuma shiftanid maanta. Bilow iib cusub.' : 'No sales in your current shift. Start a new sale.')
+                        : (language === 'so' ? 'Wali iib ma jiro. Riix "+ Iib Cusub" si aad u bilowdo.' : 'No sales recorded yet. Click "+ New Sale" to begin.')}
                     </td>
                   </tr>
                 )}

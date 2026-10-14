@@ -19,7 +19,7 @@ interface StaffViewProps {
   users: User[];
   currentUser: User;
   language: Language;
-  onAddUser: (user: { name: string; email: string; role: UserRole; pin: string }) => void;
+  onAddUser: (user: { name: string; username?: string; email: string; role: UserRole; pin: string }) => void;
   onToggleUserStatus: (userId: string) => void;
 }
 
@@ -34,6 +34,7 @@ export const StaffView: React.FC<StaffViewProps> = ({
 
   const [modalOpen, setModalOpen] = useState(false);
   const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<UserRole>('cashier');
   const [pin, setPin] = useState('1234');
@@ -41,19 +42,30 @@ export const StaffView: React.FC<StaffViewProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || pin.length < 4) {
-      alert('Name and 4-digit PIN required');
+      alert(language === 'so' ? 'Magaca iyo PIN ee 4 jibbaar ah ayaa loo baahan yahay' : 'Name and 4-digit PIN required');
       return;
     }
 
+    // Enforce RBAC: managers can only create cashier/accountant
+    if (currentUser.role === 'manager' && (role === 'admin' || role === 'manager')) {
+      alert(language === 'so' ? 'Maamulle wuxuu abuuri karaa Cashier iyo Accountant kaliya.' : 'Managers can only create Cashier or Accountant accounts.');
+      return;
+    }
+
+    const cleanUsername = username.trim().toLowerCase() || name.toLowerCase().replace(/\s+/g, '_');
+    const cleanEmail = email.trim().toLowerCase() || `${cleanUsername}@gasflow.so`;
+
     onAddUser({
-      name,
-      email: email || `${name.toLowerCase().replace(/\s+/g, '')}@gasflow.so`,
+      name: name.trim(),
+      username: cleanUsername,
+      email: cleanEmail,
       role,
-      pin
+      pin: pin.trim()
     });
 
     setModalOpen(false);
     setName('');
+    setUsername('');
     setEmail('');
     setPin('1234');
   };
@@ -134,13 +146,16 @@ export const StaffView: React.FC<StaffViewProps> = ({
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <button
-            onClick={() => setModalOpen(true)}
-            className="btn-primary"
-          >
-            <Plus className="w-4 h-4" />
-            <span>{t.addStaff}</span>
-          </button>
+          {/* Only admin and manager can add staff */}
+          {(currentUser.role === 'admin' || currentUser.role === 'manager') && (
+            <button
+              onClick={() => setModalOpen(true)}
+              className="btn-primary"
+            >
+              <Plus className="w-4 h-4" />
+              <span>{t.addStaff}</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -268,15 +283,28 @@ export const StaffView: React.FC<StaffViewProps> = ({
                 />
               </div>
 
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Email / Username</label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  placeholder="warsame@gasflow.so"
-                  className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white"
-                />
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Username *</label>
+                  <input
+                    type="text"
+                    required
+                    value={username}
+                    onChange={e => setUsername(e.target.value)}
+                    placeholder="e.g. warsame"
+                    className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Email</label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    placeholder="warsame@gasflow.so"
+                    className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white"
+                  />
+                </div>
               </div>
 
               <div>
@@ -287,10 +315,21 @@ export const StaffView: React.FC<StaffViewProps> = ({
                   className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white font-semibold"
                 >
                   <option value="cashier">Cashier (Point of Sale, Shift Entry)</option>
-                  <option value="manager">Manager (Stock, Deliveries, Voids)</option>
                   <option value="accountant">Accountant (Ledgers, Debts, Finance)</option>
-                  <option value="admin">Administrator (Complete System Access)</option>
+                  {/* Only admins can create manager or admin accounts */}
+                  {currentUser.role === 'admin' && (
+                    <>
+                      <option value="manager">Manager (Stock, Deliveries, Voids)</option>
+                      <option value="admin">Administrator (Complete System Access)</option>
+                    </>
+                  )}
                 </select>
+                {currentUser.role === 'manager' && (
+                  <p className="text-[10px] text-amber-600 mt-1 flex items-center gap-1">
+                    <Lock className="w-3 h-3" />
+                    {language === 'so' ? 'Maamulle wuxuu abuuri karaa Cashier iyo Accountant kaliya.' : 'Manager can only create Cashier or Accountant accounts.'}
+                  </p>
+                )}
               </div>
 
               <div>

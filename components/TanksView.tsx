@@ -55,9 +55,9 @@ export const TanksView: React.FC<TanksViewProps> = ({
   // Delivery form state
   const [selectedTankId, setSelectedTankId] = useState<string>(tanks[0]?.id || '');
   const [deliveryLitres, setDeliveryLitres] = useState<string>('5000');
-  const [costPerLitre, setCostPerLitre] = useState<string>('1.40');
-  const [supplierName, setSupplierName] = useState<string>('Hass Petroleum Somalia');
-  const [invoiceNumber, setInvoiceNumber] = useState<string>('HASS-2025-099');
+  const [costPerLitre, setCostPerLitre] = useState<string>('1.05');
+  const [supplierName, setSupplierName] = useState<string>('Puntland Petroleum Boosaaso');
+  const [invoiceNumber, setInvoiceNumber] = useState<string>('PPB-2026-001');
 
   // Calibrate state
   const [calibTankId, setCalibTankId] = useState<string>(tanks[0]?.id || '');
@@ -153,13 +153,13 @@ export const TanksView: React.FC<TanksViewProps> = ({
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider border-b border-slate-200">
               <tr>
-                <th className="py-3 px-4">Tank</th>
-                <th className="py-3 px-4">Fuel Type</th>
-                <th className="py-3 px-4">Level</th>
-                <th className="py-3 px-4">Volume</th>
-                <th className="py-3 px-4">Price/L</th>
-                <th className="py-3 px-4">Status</th>
-                <th className="py-3 px-4 text-right">Actions</th>
+                <th className="py-3 px-4">{language === 'so' ? 'Haanta' : 'Tank'}</th>
+                <th className="py-3 px-4">{language === 'so' ? 'Nooca Shidaalka' : 'Fuel Type'}</th>
+                <th className="py-3 px-4">{language === 'so' ? 'Heerka' : 'Level'}</th>
+                <th className="py-3 px-4">{language === 'so' ? 'Tirada Ku Jirta' : 'Volume'}</th>
+                <th className="py-3 px-4">{language === 'so' ? 'Qiimaha' : 'Price'}</th>
+                <th className="py-3 px-4">{language === 'so' ? 'Xaaladda' : 'Status'}</th>
+                <th className="py-3 px-4 text-right">{language === 'so' ? 'Ficillo' : 'Actions'}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 font-medium">
@@ -167,6 +167,7 @@ export const TanksView: React.FC<TanksViewProps> = ({
                 const pct = Math.round((tank.currentLevel / tank.capacity) * 100);
                 const badge = fuelBadges[tank.fuelType] || fuelBadges.PMS;
                 const isLow = pct < 30;
+                const isLPG = tank.fuelType === 'LPG';
 
                 return (
                   <tr key={tank.id} className="hover:bg-slate-50/60 transition-colors">
@@ -196,10 +197,10 @@ export const TanksView: React.FC<TanksViewProps> = ({
                       </div>
                     </td>
                     <td className="py-4 px-4 text-slate-700">
-                      <b>{tank.currentLevel.toLocaleString()} L</b> / {tank.capacity.toLocaleString()} L
+                      <b>{tank.currentLevel.toLocaleString()} {isLPG ? (language === 'so' ? 'Dhululubo' : 'Cyl') : 'L'}</b> / {tank.capacity.toLocaleString()} {isLPG ? (language === 'so' ? 'Dhululubo' : 'Cyl') : 'L'}
                     </td>
                     <td className="py-4 px-4 font-bold text-slate-900">
-                      ${tank.unitPrice.toFixed(2)}
+                      ${tank.unitPrice.toFixed(2)}{isLPG ? (language === 'so' ? '/Dhululubo' : '/Cyl') : '/L'}
                     </td>
                     <td className="py-4 px-4">
                       <span
@@ -209,7 +210,7 @@ export const TanksView: React.FC<TanksViewProps> = ({
                             : 'bg-emerald-100 text-emerald-700'
                         }`}
                       >
-                        {isLow ? 'Low' : 'Normal'}
+                        {isLow ? (language === 'so' ? 'Hooseeya' : 'Low') : (language === 'so' ? 'Caadi' : 'Normal')}
                       </span>
                     </td>
                     <td className="py-4 px-4 text-right">
@@ -218,9 +219,9 @@ export const TanksView: React.FC<TanksViewProps> = ({
                           setPriceModalTank(tank);
                           setNewPrice(tank.unitPrice.toString());
                         }}
-                        className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition-all"
+                        className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition-all cursor-pointer"
                       >
-                        Update Price
+                        {language === 'so' ? 'Bedel Qiimaha' : 'Update Price'}
                       </button>
                     </td>
                   </tr>

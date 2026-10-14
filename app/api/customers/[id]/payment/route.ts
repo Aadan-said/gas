@@ -1,10 +1,11 @@
 /**
  * POST /api/customers/[id]/payment
- * Records a customer debt payment
+ * Records a customer debt payment and updates ledger balance
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { generateUUID } from '@/lib/storage';
+import { authenticateRequest } from '@/lib/auth';
+import { recordCustomerPaymentTransaction } from '@/lib/server-db';
 import type { PaymentMethod } from '@/lib/types';
 
 export async function POST(
@@ -12,54 +13,37 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const userName = req.headers.get('x-user-name') ?? '';
-  const userId = req.headers.get('x-user-id') ?? '';
-
-  const body = await req.json();
-  const { amount, paymentMethod, reference, note } = body;
-
-  if (!amount || !paymentMethod) {
-    return NextResponse.json({ error: 'amount and paymentMethod are required.' }, { status: 400 });
-  }
+  const { user, session, errorResponse } = await authenticateRequest(req, {
+    allowedRoles: ['admin', 'manager', 'accountant', 'cashier']
+  });
+  if (errorResponse) return errorResponse;
 
   try {
-    const { prisma } = await import('@/lib/prisma');
-    const customer = await prisma.customer.findUnique({ where: { id } });
-    if (!customer) return NextResponse.json({ error: 'Customer not found.' }, { status: 404 });
+    const body = await req.json();
+    const { amount, paymentMethod, reference } = body;
 
-    const [payment] = await prisma.$transaction([
-      prisma.customerPayment.create({
-        data: {
-          id: generateUUID(),
-          customerId: id,
-          amount,
-          paymentMethod: paymentMethod as PaymentMethod,
-          reference: reference ?? null,
-          receivedBy: userName,
-          note: note ?? null,
-        },
-      }),
-      prisma.customer.update({
-        where: { id },
-        data: { currentBalance: { decrement: amount } },
-      }),
-      prisma.auditLog.create({
-        data: {
-          id: generateUUID(),
-          userId,
-          userName,
-          action: 'CUSTOMER_PAYMENT',
-          details: `Payment of $${amount} received from ${customer.name} via ${paymentMethod}`,
-        },
-      }),
-    ]);
+    const parsedAmount = parseFloat(amount);
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      return NextResponse.json({ error: 'Valid positive payment amount is required.' }, { status: 400 });
+    }
+    if (!paymentMethod) {
+      return NextResponse.json({ error: 'Payment method is required.' }, { status: 400 });
+    }
+
+    const payment = await recordCustomerPaymentTransaction({
+      organizationId: session.organizationId || session.stationId,
+      customerId: id,
+      amount: parsedAmount,
+      paymentMethod: paymentMethod as PaymentMethod,
+      reference,
+      receivedBy: user.name,
+      userId: user.id
+    });
 
     return NextResponse.json({ success: true, payment });
-  } catch {
-    return NextResponse.json({
-      success: true,
-      offline: true,
-      payment: { id: generateUUID(), customerId: id, amount, paymentMethod, reference, receivedBy: userName, createdAt: new Date().toISOString() },
-    });
+  } catch (err: unknown) {
+    console.error('[/api/customers/[id]/payment POST]', err);
+    const msg = err instanceof Error ? err.message : 'Failed to record customer payment.';
+    return NextResponse.json({ error: msg }, { status: 400 });
   }
 }

@@ -19,7 +19,7 @@ interface StaffViewProps {
   users: User[];
   currentUser: User;
   language: Language;
-  onAddUser: (user: { name: string; email: string; role: UserRole; pin: string }) => void;
+  onAddUser: (user: { name: string; username?: string; email: string; role: UserRole; pin: string }) => void;
   onToggleUserStatus: (userId: string) => void;
 }
 
@@ -34,6 +34,7 @@ export const StaffView: React.FC<StaffViewProps> = ({
 
   const [modalOpen, setModalOpen] = useState(false);
   const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<UserRole>('cashier');
   const [pin, setPin] = useState('1234');
@@ -45,15 +46,20 @@ export const StaffView: React.FC<StaffViewProps> = ({
       return;
     }
 
+    const cleanUsername = username.trim().toLowerCase() || name.toLowerCase().replace(/\s+/g, '_');
+    const cleanEmail = email.trim().toLowerCase() || `${cleanUsername}@gasflow.so`;
+
     onAddUser({
-      name,
-      email: email || `${name.toLowerCase().replace(/\s+/g, '')}@gasflow.so`,
+      name: name.trim(),
+      username: cleanUsername,
+      email: cleanEmail,
       role,
-      pin
+      pin: pin.trim()
     });
 
     setModalOpen(false);
     setName('');
+    setUsername('');
     setEmail('');
     setPin('1234');
   };
@@ -268,15 +274,28 @@ export const StaffView: React.FC<StaffViewProps> = ({
                 />
               </div>
 
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Email / Username</label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  placeholder="warsame@gasflow.so"
-                  className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white"
-                />
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Username *</label>
+                  <input
+                    type="text"
+                    required
+                    value={username}
+                    onChange={e => setUsername(e.target.value)}
+                    placeholder="e.g. warsame"
+                    className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Email</label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    placeholder="warsame@gasflow.so"
+                    className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white"
+                  />
+                </div>
               </div>
 
               <div>

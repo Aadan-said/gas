@@ -13,6 +13,7 @@ export interface User {
   phone?: string;
   branch?: string;
   twoFactorEnabled?: boolean;
+  organizationId?: string;
 }
 
 export type FuelTypeCode = 'PMS' | 'AGO' | 'DPK' | 'LPG';
@@ -39,6 +40,7 @@ export interface Tank {
   minThreshold: number;
   status: 'normal' | 'low' | 'critical';
   lastCalibrated?: string;
+  organizationId?: string;
 }
 
 export type PaymentMethod = 'cash' | 'evc' | 'edahab' | 'sahal' | 'card' | 'credit';
@@ -79,6 +81,7 @@ export interface FuelDelivery {
   receivedAt: string;
   dipstickBefore: number;
   dipstickAfter: number;
+  organizationId?: string;
 }
 
 export interface InventoryMovement {
@@ -92,6 +95,7 @@ export interface InventoryMovement {
   referenceId: string;
   note?: string;
   createdAt: string;
+  organizationId?: string;
 }
 
 export interface Customer {
@@ -104,6 +108,7 @@ export interface Customer {
   currentBalance: number;
   status: 'active' | 'suspended';
   createdAt: string;
+  organizationId?: string;
 }
 
 export interface CustomerPayment {
@@ -115,6 +120,7 @@ export interface CustomerPayment {
   reference?: string;
   collectedBy: string;
   createdAt: string;
+  organizationId?: string;
 }
 
 export type ExpenseCategory = 'Salaries' | 'Electricity' | 'Maintenance' | 'Rent' | 'Office Supplies' | 'Taxes' | 'Other';
@@ -127,6 +133,7 @@ export interface Expense {
   addedBy: string;
   receiptNumber?: string;
   createdAt: string;
+  organizationId?: string;
 }
 
 export interface AuditLog {
@@ -137,6 +144,7 @@ export interface AuditLog {
   details: string;
   ipAddress?: string;
   createdAt: string;
+  organizationId?: string;
 }
 
 export type NetworkMode = 'cloud_online' | 'lan_only' | 'offline_pwa';

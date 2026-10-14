@@ -4,7 +4,7 @@
  * Falls back gracefully to localStorage / local state on network error.
  */
 
-import type { User, UserRole } from './types';
+import type { User, UserRole, StationConfig } from './types';
 
 // ─── Base fetch helper ────────────────────────────────────────────────────────
 
@@ -52,7 +52,28 @@ export async function apiLogout() {
 }
 
 export async function apiGetMe() {
-  return apiFetch<{ session: { userId: string; role: UserRole; name: string } }>('/auth/me');
+  return apiFetch<{ authenticated: boolean; session: { userId: string; role: UserRole; name: string }; user: User }>('/auth/me');
+}
+
+export async function apiGetSetupStatus() {
+  return apiFetch<{ initialized: boolean; userCount: number }>('/auth/setup-status');
+}
+
+export interface SetupAdminInput {
+  name: string;
+  username: string;
+  email: string;
+  password: string;
+  pin?: string;
+  phone?: string;
+  branch?: string;
+}
+
+export async function apiSetupAdmin(data: SetupAdminInput) {
+  return apiFetch<{ success: boolean; user: User; token: string }>('/auth/setup', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
 }
 
 export interface RegisterInput {
@@ -64,12 +85,36 @@ export interface RegisterInput {
   role?: UserRole;
   phone?: string;
   branch?: string;
+  stationName?: string;
+  address?: string;
 }
 
 export async function apiRegister(data: RegisterInput) {
-  return apiFetch<{ success: boolean; user: User; offline?: boolean }>('/auth/register', {
+  return apiFetch<{ success: boolean; user: User; token?: string; message?: string }>('/auth/register', {
     method: 'POST',
     body: JSON.stringify(data),
+  });
+}
+
+export async function apiGetState() {
+  return apiFetch<{ success: boolean; state: any; syncedAt?: string }>('/state');
+}
+
+export async function apiUpdateStation(data: Partial<StationConfig> | Record<string, unknown>) {
+  return apiFetch<{ success: boolean; station: unknown }>('/state', {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function apiGetUsers() {
+  return apiFetch<{ users: User[] }>('/users');
+}
+
+export async function apiToggleUserStatus(targetUserId: string, status: 'active' | 'inactive') {
+  return apiFetch<{ success: boolean; user: User }>('/users', {
+    method: 'PATCH',
+    body: JSON.stringify({ targetUserId, status }),
   });
 }
 
@@ -86,7 +131,7 @@ export interface SaleInput {
   customerName?: string;
 }
 
-export async function apiCreateSale(data: SaleInput) {
+export async function apiCreateSale(data: SaleInput & { deviceId?: string }) {
   return apiFetch<{ success: boolean; sale: unknown; offline?: boolean }>('/sales', {
     method: 'POST',
     body: JSON.stringify(data),

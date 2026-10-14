@@ -28,6 +28,8 @@ import {
 } from 'lucide-react';
 import { User, UserRole } from '@/lib/types';
 import { Language } from '@/lib/translations';
+import { apiLogin, apiRegister, apiGetSetupStatus, apiSetupAdmin } from '@/lib/api';
+import { getDeviceId } from '@/lib/storage';
 
 interface AuthPortalProps {
   users: User[];
@@ -69,7 +71,8 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
   const [regShowPassword, setRegShowPassword] = useState(false);
   const [regRole, setRegRole] = useState<UserRole>('cashier');
   const [regPhone, setRegPhone] = useState('+252 61 ');
-  const [regBranch, setRegBranch] = useState('Mogadishu Central, KM4');
+  const [regBranch, setRegBranch] = useState('');
+  const [regStationName, setRegStationName] = useState('');
   const [reg2FAEnabled, setReg2FAEnabled] = useState(false);
   const [regError, setRegError] = useState('');
 
@@ -90,6 +93,20 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
   const [generatedOtp, setGeneratedOtp] = useState('');
   const [twoFactorError, setTwoFactorError] = useState('');
   const digitInputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const [isSetupNeeded, setIsSetupNeeded] = useState(false);
+
+  // Check if system requires initial administrator setup
+  useEffect(() => {
+    let active = true;
+    apiGetSetupStatus().then(res => {
+      if (active && res.data && res.data.initialized === false) {
+        setIsSetupNeeded(true);
+        setMode('register');
+        setRegRole('admin');
+      }
+    });
+    return () => { active = false; };
+  }, []);
 
   // Auto-focus first digit in 2FA mode
   useEffect(() => {
@@ -98,68 +115,57 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
     }
   }, [mode]);
 
-  // Handle Login Submit
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  // Handle Login Submit strictly via server API
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError('');
     setIsSubmitting(true);
 
-    setTimeout(() => {
-      setIsSubmitting(false);
-      const trimmed = loginIdentifier.trim().toLowerCase();
-      const matched = users.find(
-        u =>
-          (u.username && u.username.toLowerCase() === trimmed) ||
-          u.name.toLowerCase() === trimmed ||
-          u.email.toLowerCase() === trimmed
+    try {
+      const { data, error } = await apiLogin(
+        loginIdentifier.trim(),
+        loginPassword.trim(),
+        getDeviceId()
       );
 
-      if (!matched) {
+      setIsSubmitting(false);
+
+      if (error || !data?.success) {
         setLoginError(
-          language === 'so'
-            ? 'Username ama email-kaan lama helin. Fadlan hubi xogtaada ama isdiiwaangeli.'
-            : 'No account found with this username or email. Please check your credentials.'
+          error ||
+          (language === 'so'
+            ? 'Username-ka ama password-ka aad gelisay waa khalad.'
+            : 'Incorrect username or password.')
         );
         return;
       }
 
-      // Strict PIN / Password matching against the real user
-      if (loginPassword.trim() !== matched.pin.trim()) {
-        setLoginError(
-          language === 'so'
-            ? 'Password-ka ama PIN-ka aad gelisay waa khalad.'
-            : 'Incorrect password or PIN.'
-        );
-        return;
-      }
+      const authenticatedUser = data.user;
 
-      if (matched.status === 'inactive') {
-        setLoginError(
-          language === 'so'
-            ? 'Akoonkani waa xiran yahay (Inactive). Fadlan la xiriir maamulaha saldhigga.'
-            : 'This account is deactivated. Please contact your station administrator.'
-        );
-        return;
-      }
-
-      // If user has 2FA enabled, proceed to dynamic 2FA
-      if (matched.twoFactorEnabled) {
+      // Dynamic 2FA check
+      if (authenticatedUser.twoFactorEnabled) {
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
         setGeneratedOtp(otp);
-        setTwoFactorUser(matched);
+        setTwoFactorUser(authenticatedUser);
         setTwoFactorDigits(['', '', '', '', '', '']);
         setTwoFactorError('');
         setMode('2fa');
         return;
       }
 
-      // Direct success login
-      onLogin(matched);
-    }, 350);
+      onLogin(authenticatedUser);
+    } catch {
+      setIsSubmitting(false);
+      setLoginError(
+        language === 'so'
+          ? 'Khalad ayaa ku yimid xiriirka server-ka. Fadlan hubi server-kaaga.'
+          : 'Failed to communicate with authentication server.'
+      );
+    }
   };
 
-  // Handle Register Step 1
-  const handleRegisterStep1 = (e: React.FormEvent) => {
+  // Handle Direct Admin Registration
+  const handleRegisterAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
     setRegError('');
 
@@ -172,53 +178,51 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
       return;
     }
 
-    if (users.some(u => u.username?.toLowerCase() === regUsername.trim().toLowerCase())) {
-      setRegError(
-        language === 'so'
-          ? 'Username-kaan horey ayaa loo qaatay. Fadlan dooro mid kale.'
-          : 'This username is already taken. Please choose another.'
-      );
-      return;
-    }
-
-    if (users.some(u => u.email.toLowerCase() === regEmail.trim().toLowerCase())) {
-      setRegError(
-        language === 'so'
-          ? 'Email-kaan horey ayaa loogu diiwaangeliyay akoon kale.'
-          : 'This email is already registered.'
-      );
-      return;
-    }
-
     if (regPassword.length < 4) {
       setRegError(
         language === 'so'
-          ? 'Password-ku waa inuu ugu yaraan ka koobnaadaa 4 xaraf/tiro.'
+          ? 'Password-ku waa inuu ugu yaraan ka koobnaadaa 4 xaraf ama tiro.'
           : 'Password must be at least 4 characters.'
       );
       return;
     }
 
-    setRegStep(2);
-  };
+    setIsSubmitting(true);
 
-  // Handle Complete Registration
-  const handleRegisterComplete = () => {
-    const newUser: User = {
-      id: `u_${Date.now()}`,
-      name: regFullName.trim(),
-      username: regUsername.trim().toLowerCase(),
-      email: regEmail.trim().toLowerCase(),
-      role: regRole,
-      pin: regPassword.trim(),
-      status: 'active',
-      phone: regPhone.trim(),
-      branch: regBranch.trim(),
-      twoFactorEnabled: reg2FAEnabled,
-      lastLogin: 'Just now'
-    };
+    try {
+      const { data, error } = await apiRegister({
+        name: regFullName.trim(),
+        username: regUsername.trim().toLowerCase(),
+        email: regEmail.trim().toLowerCase(),
+        password: regPassword.trim(),
+        pin: regPassword.trim(),
+        role: 'admin',
+        stationName: regStationName.trim() || `${regFullName.trim()} Station`,
+        branch: regBranch.trim() || 'Main Branch'
+      });
 
-    onRegister(newUser);
+      setIsSubmitting(false);
+
+      if (error || !data?.success) {
+        setRegError(
+          error ||
+          (language === 'so'
+            ? 'Diiwaangelintu ma suurtagelin. Fadlan isku day mar kale.'
+            : 'Registration failed. Please try again.')
+        );
+        return;
+      }
+
+      // Directly log into dashboard with authenticated user!
+      onLogin(data.user);
+    } catch {
+      setIsSubmitting(false);
+      setRegError(
+        language === 'so'
+          ? 'Khalad ayaa ku yimid xiriirka server-ka. Fadlan hubi server-kaaga.'
+          : 'Failed to communicate with authentication server.'
+      );
+    }
   };
 
   // Handle Forgot Password - Step 1: Email Lookup
@@ -230,7 +234,7 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
     if (!matched) {
       setForgotError(
         language === 'so'
-          ? 'Email-kaan kuma jiro diiwaanka saldhigga. Fadlan hubi email-kaaga.'
+          ? 'Email-kaan kuma jiro diiwaanka Kaalinta. Fadlan hubi email-kaaga.'
           : 'No account registered with this email address.'
       );
       return;
@@ -647,39 +651,27 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
                   </h3>
                   <p className="text-xs text-slate-500 mt-0.5">
                     {language === 'so'
-                      ? 'Diiwaangeli akoon shaqaale ama maamule saldhig'
-                      : 'Register a new employee or station operator'}
+                      ? 'Diiwaangeli saldhiggaaga — xogtaadu waa kuu gaar, shaqaalaha iyo taleefannada ayaa isku xog arki doona'
+                      : 'Register your station — your data stays private, and staff computers/phones share the same live records'}
                   </p>
                 </div>
 
-                {/* 3-Step Stepper Header */}
-                <div className="grid grid-cols-3 gap-2 mb-6">
-                  {[
-                    { step: 1, label: language === 'so' ? 'Xogta Guud' : 'General Info' },
-                    { step: 2, label: language === 'so' ? 'Doorka & Laanta' : 'Role & Branch' },
-                    { step: 3, label: language === 'so' ? 'Hubin & Dhammaystir' : 'Review & Finish' }
-                  ].map(s => {
-                    const isActive = regStep === s.step;
-                    const isDone = regStep > s.step;
-                    return (
-                      <div key={s.step} className="flex flex-col items-center text-center">
-                        <div
-                          className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all mb-1.5 ${
-                            isActive
-                              ? 'bg-emerald-600 text-white ring-4 ring-emerald-100'
-                              : isDone
-                              ? 'bg-emerald-100 text-emerald-800'
-                              : 'bg-slate-100 text-slate-400'
-                          }`}
-                        >
-                          {isDone ? <Check className="w-4 h-4" /> : s.step}
-                        </div>
-                        <span className={`text-[11px] font-semibold leading-tight ${isActive ? 'text-slate-900' : 'text-slate-400'}`}>
-                          {s.label}
-                        </span>
-                      </div>
-                    );
-                  })}
+                {/* Admin Authority Badge */}
+                <div className="mb-4 flex items-center gap-2.5 px-3.5 py-2.5 rounded-2xl bg-emerald-50 border border-emerald-200/80">
+                  <div className="w-7 h-7 rounded-xl bg-emerald-600 text-white flex items-center justify-center text-xs font-bold shrink-0">
+                    <ShieldCheck className="w-4 h-4" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-bold text-emerald-950 flex items-center gap-1.5">
+                      <span>{language === 'so' ? 'Diiwaangelinta Maamulaha (Station Admin)' : 'Station Administrator (Admin)'}</span>
+                      <span className="px-1.5 py-0.5 rounded-full bg-emerald-200 text-emerald-900 text-[9px] font-black uppercase tracking-wider">Full Access</span>
+                    </div>
+                    <div className="text-[10px] text-emerald-700 leading-tight mt-0.5">
+                      {language === 'so'
+                        ? 'Maamule kasta wuxuu yeelanayaa dashboard gaar ah oo uu ku abuuro cashier, accountant & roles-ka kale.'
+                        : 'Every administrator gets their own dashboard with full control to create cashiers, accountants, and staff roles.'}
+                    </div>
+                  </div>
                 </div>
 
                 {/* Error Banner */}
@@ -690,222 +682,89 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
                   </div>
                 )}
 
-                {/* STEP 1: General Info */}
-                {regStep === 1 && (
-                  <form onSubmit={handleRegisterStep1} className="space-y-3.5">
+                {/* Single Step Direct Form */}
+                <form onSubmit={handleRegisterAdmin} className="space-y-3.5">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      {language === 'so' ? 'Magacaaga Buuxa *' : 'Full Name *'}
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={regFullName}
+                      onChange={e => setRegFullName(e.target.value)}
+                      placeholder="e.g. Aadan Said"
+                      className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-50/60 focus:bg-white focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20 text-xs sm:text-sm text-slate-900 font-medium"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-bold text-slate-700 mb-1">
-                        {language === 'so' ? 'Magacaaga Buuxa *' : 'Full Name *'}
+                        Username *
                       </label>
                       <input
                         type="text"
                         required
-                        value={regFullName}
-                        onChange={e => setRegFullName(e.target.value)}
-                        placeholder="e.g. Aadan Said"
-                        className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-50/60 focus:bg-white focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20 text-xs sm:text-sm text-slate-900"
+                        value={regUsername}
+                        onChange={e => setRegUsername(e.target.value)}
+                        placeholder="e.g. aadansaid"
+                        className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-50/60 focus:bg-white focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20 text-xs sm:text-sm text-slate-900 font-mono"
                       />
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-xs font-bold text-slate-700 mb-1">
-                          Username *
-                        </label>
-                        <input
-                          type="text"
-                          required
-                          value={regUsername}
-                          onChange={e => setRegUsername(e.target.value)}
-                          placeholder="e.g. aadansaid"
-                          className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-50/60 focus:bg-white focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20 text-xs sm:text-sm text-slate-900"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-bold text-slate-700 mb-1">
-                          Email *
-                        </label>
-                        <input
-                          type="email"
-                          required
-                          value={regEmail}
-                          onChange={e => setRegEmail(e.target.value)}
-                          placeholder="e.g. aadan@gasflow.so"
-                          className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-50/60 focus:bg-white focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20 text-xs sm:text-sm text-slate-900"
-                        />
-                      </div>
                     </div>
 
                     <div>
                       <label className="block text-xs font-bold text-slate-700 mb-1">
-                        Password / PIN *
+                        Email *
                       </label>
-                      <div className="relative">
-                        <input
-                          type={regShowPassword ? 'text' : 'password'}
-                          required
-                          value={regPassword}
-                          onChange={e => setRegPassword(e.target.value)}
-                          placeholder={language === 'so' ? 'PIN ama password (ugu yaraan 4 xaraf)' : 'PIN or password (min 4 chars)'}
-                          className="w-full h-10 px-3 pr-10 rounded-xl border border-slate-200 bg-slate-50/60 focus:bg-white focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20 text-xs sm:text-sm text-slate-900 font-mono tracking-widest"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setRegShowPassword(!regShowPassword)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                        >
-                          {regShowPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        </button>
-                      </div>
-                    </div>
-
-                    <button
-                      type="submit"
-                      className="w-full h-11 bg-[#007A55] hover:bg-[#006244] text-white font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-2 text-sm cursor-pointer mt-4"
-                    >
-                      <span>{language === 'so' ? 'Tallaabada Xigta' : 'Next Step'}</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </button>
-                  </form>
-                )}
-
-                {/* STEP 2: Role & Branch Selection */}
-                {regStep === 2 && (
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 mb-2">
-                        {language === 'so' ? 'Doorka Shaqaalaha (System Role) *' : 'System Role *'}
-                      </label>
-                      <div className="grid grid-cols-2 gap-2.5">
-                        {[
-                          { role: 'cashier', label: 'Cashier / POS', desc: 'Nozzles, sales, receipts' },
-                          { role: 'manager', label: 'Station Manager', desc: 'Tanks, deliveries, calibration' },
-                          { role: 'accountant', label: 'Accountant', desc: 'Ledger, expenses, debt credit' },
-                          { role: 'admin', label: 'Full Admin', desc: 'Full station authority' }
-                        ].map(item => (
-                          <button
-                            key={item.role}
-                            type="button"
-                            onClick={() => setRegRole(item.role as UserRole)}
-                            className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
-                              regRole === item.role
-                                ? 'bg-emerald-50 border-emerald-600 ring-2 ring-emerald-600/20'
-                                : 'border-slate-200 hover:border-slate-300 bg-slate-50/50'
-                            }`}
-                          >
-                            <div className="text-xs font-bold text-slate-900">{item.label}</div>
-                            <div className="text-[10px] text-slate-500 mt-0.5">{item.desc}</div>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-xs font-bold text-slate-700 mb-1">
-                          Telefoonka (Phone)
-                        </label>
-                        <input
-                          type="text"
-                          value={regPhone}
-                          onChange={e => setRegPhone(e.target.value)}
-                          className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-50/60 focus:bg-white text-xs text-slate-900 font-mono"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-bold text-slate-700 mb-1">
-                          Laanta Saldhigga (Branch)
-                        </label>
-                        <select
-                          value={regBranch}
-                          onChange={e => setRegBranch(e.target.value)}
-                          className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-50/60 focus:bg-white text-xs text-slate-900 font-semibold"
-                        >
-                          <option value="Mogadishu Central, KM4">Mogadishu Central, KM4</option>
-                          <option value="Mogadishu Wadajir, Airport Rd">Mogadishu Wadajir, Airport Rd</option>
-                          <option value="Hargeisa Main, Jigjiga Yar">Hargeisa Main, Jigjiga Yar</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div className="flex gap-2 pt-3">
-                      <button
-                        type="button"
-                        onClick={() => setRegStep(1)}
-                        className="px-4 h-11 rounded-xl border border-slate-200 hover:bg-slate-50 text-xs font-bold text-slate-700 cursor-pointer"
-                      >
-                        {language === 'so' ? 'Dib u noqo' : 'Back'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setRegStep(3)}
-                        className="flex-1 h-11 bg-[#007A55] hover:bg-[#006244] text-white font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-2 text-sm cursor-pointer"
-                      >
-                        <span>{language === 'so' ? 'Tallaabada Xigta' : 'Review & Finish'}</span>
-                        <ArrowRight className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* STEP 3: Review & Complete */}
-                {regStep === 3 && (
-                  <div className="space-y-4">
-                    <div className="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-200 space-y-2 text-xs">
-                      <div className="flex justify-between">
-                        <span className="text-slate-500">Magaca:</span>
-                        <span className="font-bold text-slate-900">{regFullName}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-500">Username:</span>
-                        <span className="font-mono font-bold text-slate-900">{regUsername}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-500">Email:</span>
-                        <span className="font-bold text-slate-900">{regEmail}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-500">Doorka:</span>
-                        <span className="font-bold uppercase text-emerald-800">{regRole}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-500">Branch:</span>
-                        <span className="font-bold text-slate-900">{regBranch}</span>
-                      </div>
-                    </div>
-
-                    <label className="flex items-center gap-2 text-xs cursor-pointer select-none p-3 rounded-xl border border-slate-200 bg-slate-50">
                       <input
-                        type="checkbox"
-                        checked={reg2FAEnabled}
-                        onChange={e => setReg2FAEnabled(e.target.checked)}
-                        className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500"
+                        type="email"
+                        required
+                        value={regEmail}
+                        onChange={e => setRegEmail(e.target.value)}
+                        placeholder="e.g. aadan@gasflow.so"
+                        className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-50/60 focus:bg-white focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20 text-xs sm:text-sm text-slate-900 font-medium"
                       />
-                      <span className="font-bold text-slate-800">
-                        {language === 'so' ? 'Daar Two-Factor Authentication (2FA) akoonkan' : 'Enable 2FA security on this account'}
-                      </span>
-                    </label>
+                    </div>
+                  </div>
 
-                    <div className="flex gap-2 pt-2">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Password / PIN *
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={regShowPassword ? 'text' : 'password'}
+                        required
+                        value={regPassword}
+                        onChange={e => setRegPassword(e.target.value)}
+                        placeholder={language === 'so' ? 'PIN ama password (ugu yaraan 4 xaraf)' : 'PIN or password (min 4 chars)'}
+                        className="w-full h-10 px-3 pr-10 rounded-xl border border-slate-200 bg-slate-50/60 focus:bg-white focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20 text-xs sm:text-sm text-slate-900 font-mono tracking-widest"
+                      />
                       <button
                         type="button"
-                        onClick={() => setRegStep(2)}
-                        className="px-4 h-11 rounded-xl border border-slate-200 hover:bg-slate-50 text-xs font-bold text-slate-700 cursor-pointer"
+                        onClick={() => setRegShowPassword(!regShowPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+                        tabIndex={-1}
                       >
-                        {language === 'so' ? 'Dib u noqo' : 'Back'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleRegisterComplete}
-                        className="flex-1 h-11 bg-[#007A55] hover:bg-[#006244] text-white font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-2 text-sm cursor-pointer"
-                      >
-                        <CheckCircle2 className="w-4 h-4" />
-                        <span>{language === 'so' ? 'Dhammaystir & Gal Dashboard' : 'Complete & Enter Dashboard'}</span>
+                        {regShowPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
                     </div>
                   </div>
-                )}
+
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="w-full h-11 bg-[#007A55] hover:bg-[#006244] active:bg-[#005238] text-white font-bold rounded-xl shadow-md shadow-emerald-700/20 transition-all flex items-center justify-center gap-2 text-sm cursor-pointer disabled:opacity-50 mt-4"
+                  >
+                    <span>
+                      {isSubmitting
+                        ? (language === 'so' ? 'Waa la diiwaangelinayaa...' : 'Registering Admin...')
+                        : (language === 'so' ? 'Isdiiwaangeli & Toos u Gal Dashboard-ka' : 'Register & Enter Dashboard')}
+                    </span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </form>
               </div>
 
               {/* Bottom Login Link */}

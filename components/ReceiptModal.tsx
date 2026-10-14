@@ -26,7 +26,13 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   const isVoided = sale.paymentStatus === 'voided';
 
   const PAYMENT_LABEL: Record<string, string> = {
-    cash: 'Cash', evc: 'EVC Plus', zaad: 'Zaad', edahab: 'eDahab', credit: 'Credit', card: 'Card'
+    cash: language === 'so' ? 'Lacag Caddaan ah' : 'Cash in Hand',
+    sahal: 'Golis Sahal (+252 090)',
+    evc: 'EVC Plus (HMD)',
+    edahab: 'eDahab (STL)',
+    zaad: 'Zaad',
+    credit: language === 'so' ? 'Deyn (Credit)' : 'Credit Account',
+    card: language === 'so' ? 'Kaadh / Bank' : 'Card / Bank'
   };
 
   return (

@@ -5,8 +5,9 @@ import {
   getInitialState,
   saveState,
   generateUUID,
-  AppState,
-  INITIAL_USERS
+  emptyAppState,
+  getDeviceId,
+  AppState
 } from '@/lib/storage';
 import {
   User,
@@ -23,7 +24,23 @@ import {
   StationConfig
 } from '@/lib/types';
 import { translations, Language } from '@/lib/translations';
-import { apiLogin, apiLogout, apiRegister } from '@/lib/api';
+import {
+  apiLogin,
+  apiLogout,
+  apiRegister,
+  apiGetMe,
+  apiGetState,
+  apiCreateSale,
+  apiVoidSale,
+  apiRecordDelivery,
+  apiCalibrateTank,
+  apiUpdateTankPrice,
+  apiAddCustomer,
+  apiRecordPayment,
+  apiAddExpense,
+  apiToggleUserStatus,
+  apiUpdateStation
+} from '@/lib/api';
 
 // Modular Enterprise Architecture Components
 import { AuthPortal, LoginModal } from '@/components/auth';
@@ -83,35 +100,52 @@ export default function Home() {
     setToasts(prev => prev.filter(t => t.id !== id));
   };
 
-  // Hydrate stored state from localStorage + restore auth session
+  const applyServerState = useCallback((serverState: Record<string, unknown>, user?: User | null) => {
+    setState(prev => ({
+      ...prev,
+      station: (serverState.station as StationConfig) || prev.station,
+      users: (serverState.users as User[]) || [],
+      tanks: (serverState.tanks as Tank[]) || [],
+      sales: (serverState.sales as Sale[]) || [],
+      deliveries: (serverState.deliveries as FuelDelivery[]) || [],
+      movements: (serverState.movements as AppState['movements']) || [],
+      customers: (serverState.customers as Customer[]) || [],
+      customerPayments: (serverState.customerPayments as AppState['customerPayments']) || [],
+      expenses: (serverState.expenses as Expense[]) || [],
+      auditLogs: (serverState.auditLogs as AppState['auditLogs']) || [],
+      currentUser: user === undefined ? prev.currentUser : user ?? prev.currentUser,
+      networkMode: 'cloud_online',
+      activeDeviceId: getDeviceId()
+    }));
+  }, []);
+
+  const refreshStationState = useCallback(async (user?: User | null) => {
+    const res = await apiGetState();
+    if (res.data?.success && res.data.state) {
+      applyServerState(res.data.state, user);
+      return true;
+    }
+    return false;
+  }, [applyServerState]);
+
+  // Restore session, then keep this device in sync with the station server
   useEffect(() => {
     setMounted(true);
-    try {
-      const raw = localStorage.getItem('gasflow_app_state_v2');
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        const existingUserIds = new Set((parsed.users || []).map((u: User) => u.id));
-        const mergedUsers = [
-          ...(parsed.users || []),
-          ...INITIAL_USERS.filter(u => !existingUserIds.has(u.id))
-        ];
-        setState(prev => ({
-          ...prev,
-          ...parsed,
-          users: mergedUsers,
-          currentUser: parsed.currentUser || prev.currentUser
-        }));
-        // Only restore auth if session was explicitly active in this browser session
-        const sessionActive = typeof window !== 'undefined' && sessionStorage.getItem('gasflow_session_active') === 'true';
-        if (sessionActive && parsed.currentUser) {
-          setIsAuthenticated(true);
-        } else {
-          setIsAuthenticated(false);
-        }
+    setState(prev => ({ ...prev, activeDeviceId: getDeviceId() }));
+
+    apiGetMe().then(async res => {
+      const authData = res.data;
+      if (authData && authData.authenticated && authData.user) {
+        const u = authData.user;
+        setIsAuthenticated(true);
+        await refreshStationState(u);
+      } else {
+        setIsAuthenticated(false);
+        setState(emptyAppState());
       }
-    } catch (e) {
-      console.error('Error hydrating GasFlow state:', e);
-    }
+    }).catch(() => {
+      setIsAuthenticated(false);
+    });
 
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker
@@ -119,7 +153,24 @@ export default function Home() {
         .then(reg => console.log('Service Worker registered:', reg.scope))
         .catch(err => console.log('Service Worker registration failed:', err));
     }
-  }, []);
+  }, [refreshStationState]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const tick = () => {
+      refreshStationState().catch(() => {});
+    };
+    const interval = setInterval(tick, 8000);
+    const onVisible = () => {
+      if (!document.hidden) tick();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [isAuthenticated, refreshStationState]);
 
   // Auto-save state to localStorage on every change
   useEffect(() => {
@@ -128,77 +179,60 @@ export default function Home() {
     }
   }, [state, mounted]);
 
-  const currentUser = state.currentUser || state.users[0];
+  const currentUser: User = state.currentUser || {
+    id: 'guest',
+    name: 'Operator',
+    email: 'operator@gasflow.so',
+    role: 'cashier',
+    pin: '****',
+    status: 'active'
+  };
   const pendingSyncCount = state.syncEvents.filter(e => e.syncStatus === 'pending').length;
 
   // 0. Authentication Handlers
-  const handleLogin = async (user: User) => {
-    // ── Try backend API first ──────────────────────────────────────────────
-    const { data, error: apiErr, offline } = await apiLogin(
-      user.username ?? user.email,
-      user.pin
-    );
-
-    // Use API user if available, otherwise use the passed user (offline mode)
-    const loggedInUser: User = (data && !offline) ? data.user : user;
-
-    if (apiErr && !offline) {
-      // Show non-fatal warning — we still allow offline login via seed users
-      console.warn('API login failed, using offline mode:', apiErr);
-    }
-
-    setState(prev => ({
-      ...prev,
-      currentUser: loggedInUser,
-      auditLogs: [
-        {
-          id: `log_${Date.now()}`,
-          userId: loggedInUser.id,
-          userName: loggedInUser.name,
-          action: 'USER_LOGIN',
-          details: `User logged in with role: ${loggedInUser.role.toUpperCase()}${offline ? ' (offline mode)' : ''}`,
-          createdAt: new Date().toISOString()
-        },
-        ...prev.auditLogs
-      ]
-    }));
+  const handleLogin = (user: User) => {
+    setIsAuthenticated(true);
+    setState(prev => ({ ...prev, currentUser: user, activeDeviceId: getDeviceId() }));
+    refreshStationState(user).catch(() => {});
     if (typeof window !== 'undefined') {
       sessionStorage.setItem('gasflow_session_active', 'true');
     }
-    setIsAuthenticated(true);
-    setCurrentView('dashboard');
+    setCurrentView(user.role === 'cashier' ? 'sales' : 'dashboard');
     showToast(
       language === 'so'
-        ? `Ku soo dhowow GasFlow, ${loggedInUser.name} (${loggedInUser.role.toUpperCase()})!`
-        : `Welcome to GasFlow, ${loggedInUser.name}!`,
+        ? `Ku soo dhowow GasFlow, ${user.name} (${user.role.toUpperCase()})!`
+        : `Welcome to GasFlow, ${user.name}!`,
       'success'
     );
   };
 
   const handleRegister = async (newUser: User) => {
-    // ── Try backend API first ──────────────────────────────────────────────
-    const { data, offline } = await apiRegister({
+    const { data, error } = await apiRegister({
       name: newUser.name,
       username: newUser.username ?? newUser.email,
       email: newUser.email,
-      password: newUser.pin, // AuthPortal stores plain password in pin field during registration
+      password: newUser.pin,
       pin: newUser.pin,
       role: newUser.role,
       phone: newUser.phone,
       branch: newUser.branch,
     });
 
-    const registeredUser: User = (data && !offline) ? data.user : newUser;
+    if (error || !data?.success) {
+      showToast(error || 'Failed to create staff account.', 'error');
+      return;
+    }
+
+    const registeredUser = data.user;
 
     setState(prev => ({
       ...prev,
       users: [registeredUser, ...prev.users],
-      currentUser: registeredUser,
       auditLogs: [
         {
           id: `log_${Date.now()}`,
-          userId: registeredUser.id,
-          userName: registeredUser.name,
+          userId: currentUser.id,
+          userName: currentUser.name,
           action: 'USER_REGISTERED',
           details: `New account created: ${registeredUser.name} (${registeredUser.role.toUpperCase()})`,
           createdAt: new Date().toISOString()
@@ -206,11 +240,6 @@ export default function Home() {
         ...prev.auditLogs
       ]
     }));
-    if (typeof window !== 'undefined') {
-      sessionStorage.setItem('gasflow_session_active', 'true');
-    }
-    setIsAuthenticated(true);
-    setCurrentView('dashboard');
     showToast(
       language === 'so'
         ? `Akoon cusub waa la sameeyay: ${registeredUser.name}`
@@ -220,19 +249,11 @@ export default function Home() {
   };
 
   const handleLogout = async () => {
-    // Clear backend session cookie
     await apiLogout();
     if (typeof window !== 'undefined') {
       sessionStorage.removeItem('gasflow_session_active');
     }
-    // Clear persisted auth from localStorage
-    const raw = localStorage.getItem('gasflow_app_state_v2');
-    if (raw) {
-      try {
-        const parsed = JSON.parse(raw);
-        localStorage.setItem('gasflow_app_state_v2', JSON.stringify({ ...parsed, currentUser: null }));
-      } catch { /* ignore */ }
-    }
+    setState(emptyAppState());
     setIsAuthenticated(false);
     setAuthInitialMode('login');
     setCurrentView('dashboard');
@@ -243,7 +264,7 @@ export default function Home() {
   };
 
   // 1. Process Sale (Single atomic transaction)
-  const handleProcessSale = (saleData: {
+  const handleProcessSale = async (saleData: {
     fuelType: FuelTypeCode;
     tankId: string;
     litres: number;
@@ -253,172 +274,62 @@ export default function Home() {
     customerId?: string;
     customerName?: string;
   }) => {
-    const saleId = `sale_${generateUUID()}`;
-    const saleNumber = `GF-2025-${(state.sales.length + 1).toString().padStart(3, '0')}`;
-    const timestamp = new Date().toISOString();
-
-    const newSale: Sale = {
-      id: saleId,
-      saleNumber,
-      stationId: state.station.id,
-      deviceId: state.activeDeviceId,
-      cashierId: currentUser.id,
-      cashierName: currentUser.name,
+    const { data, error } = await apiCreateSale({
       fuelType: saleData.fuelType,
       tankId: saleData.tankId,
       litres: saleData.litres,
       unitPrice: saleData.unitPrice,
       totalAmount: saleData.totalAmount,
       paymentMethod: saleData.paymentMethod,
-      paymentStatus: 'paid',
       customerId: saleData.customerId,
       customerName: saleData.customerName,
-      createdAt: timestamp,
-      syncStatus: state.networkMode === 'cloud_online' ? 'synced' : 'pending_local'
-    };
-
-    // Update target tank level
-    const updatedTanks = state.tanks.map(tank => {
-      if (tank.id === saleData.tankId) {
-        return {
-          ...tank,
-          currentLevel: Math.max(0, parseFloat((tank.currentLevel - saleData.litres).toFixed(2)))
-        };
-      }
-      return tank;
+      deviceId: getDeviceId()
     });
 
-    // Update customer debt if credit
-    const updatedCustomers = state.customers.map(cust => {
-      if (saleData.customerId && cust.id === saleData.customerId) {
-        return {
-          ...cust,
-          currentBalance: parseFloat((cust.currentBalance + saleData.totalAmount).toFixed(2))
-        };
-      }
-      return cust;
-    });
+    if (error || !data?.success) {
+      showToast(error || 'Failed to process sale.', 'error');
+      return;
+    }
 
-    // Add inventory movement
-    const prevLevel = state.tanks.find(t => t.id === saleData.tankId)?.currentLevel || 0;
-    const newMovement = {
-      id: `mov_${generateUUID()}`,
-      tankId: saleData.tankId,
-      fuelType: saleData.fuelType,
-      type: 'sale' as const,
-      quantity: -saleData.litres,
-      previousLevel: prevLevel,
-      newLevel: prevLevel - saleData.litres,
-      referenceId: saleNumber,
-      note: `Dispensed to ${saleData.customerName || 'Walk-in'}`,
-      createdAt: timestamp
-    };
-
-    // Add sync event
-    const newSyncEvent = {
-      eventId: generateUUID(),
-      entityType: 'sale' as const,
-      entityId: saleId,
-      action: 'create' as const,
-      deviceId: state.activeDeviceId,
-      stationId: state.station.id,
-      timestamp,
-      syncStatus: state.networkMode === 'cloud_online' ? ('synced' as const) : ('pending' as const),
-      retryCount: 0,
-      payloadSummary: `Sale ${saleNumber} (${saleData.fuelType} ${saleData.litres}L - $${saleData.totalAmount})`
-    };
-
-    // Audit log
-    const newAuditLog = {
-      id: `log_${generateUUID()}`,
-      userId: currentUser.id,
-      userName: currentUser.name,
-      action: 'SALE_CREATE',
-      details: `Created sale ${saleNumber}: ${saleData.fuelType} ${saleData.litres}L for $${saleData.totalAmount} (${saleData.paymentMethod.toUpperCase()})`,
-      createdAt: timestamp
-    };
-
-    setState(prev => ({
-      ...prev,
-      sales: [newSale, ...prev.sales],
-      tanks: updatedTanks,
-      customers: updatedCustomers,
-      movements: [newMovement, ...prev.movements],
-      syncEvents: [newSyncEvent, ...prev.syncEvents],
-      auditLogs: [newAuditLog, ...prev.auditLogs]
-    }));
+    const createdSale = data.sale as Sale;
+    const effectiveTotal = (data as { totalAmount?: number }).totalAmount ?? saleData.totalAmount;
+    await refreshStationState();
 
     // Automatically display official receipt
-    setSelectedReceiptSale(newSale);
+    setSelectedReceiptSale(createdSale);
     showToast(
       language === 'so'
-        ? `Iibka ${saleNumber} waa la xaqiijiyay! ($${saleData.totalAmount.toFixed(2)})`
-        : `Sale ${saleNumber} processed! ($${saleData.totalAmount.toFixed(2)})`
+        ? `Iibka ${createdSale.saleNumber} waa la xaqiijiyay! ($${effectiveTotal.toFixed(2)})`
+        : `Sale ${createdSale.saleNumber} processed! ($${effectiveTotal.toFixed(2)})`
     );
   };
 
   // 2. Void Sale
-  const handleVoidSale = (saleId: string, reason: string) => {
+  const handleVoidSale = async (saleId: string, reason: string) => {
     const targetSale = state.sales.find(s => s.id === saleId);
-    if (!targetSale || targetSale.paymentStatus === 'voided') return;
+    if (!targetSale) {
+      showToast('Iibka la doortay ma jiro.', 'error');
+      return;
+    }
 
-    const timestamp = new Date().toISOString();
+    const { data, error } = await apiVoidSale(saleId, reason);
+    if (error || !data?.success) {
+      showToast(error || 'Failed to void sale.', 'error');
+      return;
+    }
 
-    const updatedTanks = state.tanks.map(tank => {
-      if (tank.id === targetSale.tankId) {
-        return {
-          ...tank,
-          currentLevel: parseFloat((tank.currentLevel + targetSale.litres).toFixed(2))
-        };
-      }
-      return tank;
-    });
+    await refreshStationState();
 
-    const updatedCustomers = state.customers.map(cust => {
-      if (targetSale.customerId && cust.id === targetSale.customerId) {
-        return {
-          ...cust,
-          currentBalance: Math.max(0, parseFloat((cust.currentBalance - targetSale.totalAmount).toFixed(2)))
-        };
-      }
-      return cust;
-    });
-
-    const updatedSales = state.sales.map(s => {
-      if (s.id === saleId) {
-        return {
-          ...s,
-          paymentStatus: 'voided' as const,
-          voidReason: reason,
-          voidedBy: currentUser.name,
-          voidedAt: timestamp
-        };
-      }
-      return s;
-    });
-
-    const newAuditLog = {
-      id: `log_${generateUUID()}`,
-      userId: currentUser.id,
-      userName: currentUser.name,
-      action: 'SALE_VOID',
-      details: `Voided sale ${targetSale.saleNumber} ($${targetSale.totalAmount}). Reason: ${reason}`,
-      createdAt: timestamp
-    };
-
-    setState(prev => ({
-      ...prev,
-      sales: updatedSales,
-      tanks: updatedTanks,
-      customers: updatedCustomers,
-      auditLogs: [newAuditLog, ...prev.auditLogs]
-    }));
-
-    showToast(`Transaction ${targetSale.saleNumber} voided and fuel stock restored.`, 'info');
+    showToast(
+      language === 'so'
+        ? `Iibka ${targetSale.saleNumber} waa la baab'iyay. Shidaalkiina dib baa loogu celiyay haanta.`
+        : `Sale ${targetSale.saleNumber} voided. Stock restored to tank.`,
+      'info'
+    );
   };
 
   // 3. Add Fuel Delivery
-  const handleAddDelivery = (deliveryData: {
+  const handleAddDelivery = async (deliveryData: {
     tankId: string;
     fuelType: FuelTypeCode;
     litres: number;
@@ -429,275 +340,180 @@ export default function Home() {
     dipstickBefore: number;
     dipstickAfter: number;
   }) => {
-    const deliveryId = `del_${generateUUID()}`;
-    const timestamp = new Date().toISOString().split('T')[0];
-
-    const newDelivery: FuelDelivery = {
-      id: deliveryId,
-      ...deliveryData,
-      receivedBy: currentUser.name,
-      receivedAt: timestamp
-    };
-
-    const updatedTanks = state.tanks.map(tank => {
-      if (tank.id === deliveryData.tankId) {
-        return {
-          ...tank,
-          currentLevel: Math.min(tank.capacity, tank.currentLevel + deliveryData.litres)
-        };
-      }
-      return tank;
+    const { data, error } = await apiRecordDelivery(deliveryData.tankId, {
+      litres: deliveryData.litres,
+      costPerLitre: deliveryData.costPerLitre,
+      totalCost: deliveryData.totalCost,
+      supplier: deliveryData.supplier,
+      invoiceNumber: deliveryData.invoiceNumber,
+      dipstickBefore: deliveryData.dipstickBefore,
+      dipstickAfter: deliveryData.dipstickAfter
     });
 
-    const prevLevel = state.tanks.find(t => t.id === deliveryData.tankId)?.currentLevel || 0;
-    const newMovement = {
-      id: `mov_${generateUUID()}`,
-      tankId: deliveryData.tankId,
-      fuelType: deliveryData.fuelType,
-      type: 'delivery' as const,
-      quantity: deliveryData.litres,
-      previousLevel: deliveryData.dipstickBefore,
-      newLevel: deliveryData.dipstickAfter,
-      referenceId: deliveryData.invoiceNumber,
-      note: `Received from ${deliveryData.supplier}`,
-      createdAt: timestamp
-    };
+    if (error || !data?.success) {
+      showToast(error || 'Failed to record delivery on server.', 'error');
+      return;
+    }
 
-    const newAuditLog = {
-      id: `log_${generateUUID()}`,
-      userId: currentUser.id,
-      userName: currentUser.name,
-      action: 'DELIVERY_RECEIVE',
-      details: `Received ${deliveryData.litres}L ${deliveryData.fuelType} from ${deliveryData.supplier} ($${deliveryData.totalCost})`,
-      createdAt: new Date().toISOString()
-    };
-
-    setState(prev => ({
-      ...prev,
-      deliveries: [newDelivery, ...prev.deliveries],
-      tanks: updatedTanks,
-      movements: [newMovement, ...prev.movements],
-      auditLogs: [newAuditLog, ...prev.auditLogs]
-    }));
+    await refreshStationState();
 
     showToast(`Delivery of ${deliveryData.litres.toLocaleString()}L recorded into Tank.`);
   };
 
   // 4. Dipstick Calibration
-  const handleCalibrateDipstick = (tankId: string, measuredLevel: number, notes: string) => {
+  const handleCalibrateDipstick = async (tankId: string, measuredLevel: number, notes: string) => {
     const targetTank = state.tanks.find(t => t.id === tankId);
     if (!targetTank) return;
 
+    const { data, error } = await apiCalibrateTank(tankId, measuredLevel, notes);
+    if (error || !data?.success) {
+      showToast(error || 'Failed to calibrate dipstick on server.', 'error');
+      return;
+    }
+
     const diff = measuredLevel - targetTank.currentLevel;
-    const timestamp = new Date().toISOString().split('T')[0];
-
-    const updatedTanks = state.tanks.map(t => {
-      if (t.id === tankId) {
-        return { ...t, currentLevel: measuredLevel, lastCalibrated: timestamp };
-      }
-      return t;
-    });
-
-    const newMovement = {
-      id: `mov_${generateUUID()}`,
-      tankId,
-      fuelType: targetTank.fuelType,
-      type: 'adjustment' as const,
-      quantity: diff,
-      previousLevel: targetTank.currentLevel,
-      newLevel: measuredLevel,
-      referenceId: `CALIB-${Date.now().toString().slice(-4)}`,
-      note: notes,
-      createdAt: timestamp
-    };
-
-    const newAuditLog = {
-      id: `log_${generateUUID()}`,
-      userId: currentUser.id,
-      userName: currentUser.name,
-      action: 'DIPSTICK_CALIBRATE',
-      details: `Calibrated ${targetTank.name} from ${targetTank.currentLevel}L to ${measuredLevel}L (Variance: ${diff >= 0 ? '+' : ''}${diff}L)`,
-      createdAt: new Date().toISOString()
-    };
-
-    setState(prev => ({
-      ...prev,
-      tanks: updatedTanks,
-      movements: [newMovement, ...prev.movements],
-      auditLogs: [newAuditLog, ...prev.auditLogs]
-    }));
+    await refreshStationState();
 
     showToast(`Dipstick calibrated: variance ${diff >= 0 ? '+' : ''}${diff}L adjusted.`);
   };
 
   // 4b. Manual Stock Adjustment
-  const handleStockAdjustment = (adj: { tankId: string; quantity: number; reason: string }) => {
+  const handleStockAdjustment = async (adj: { tankId: string; quantity: number; reason: string }) => {
     const targetTank = state.tanks.find(t => t.id === adj.tankId);
     if (!targetTank) return;
     const newLevel = Math.max(0, parseFloat((targetTank.currentLevel + adj.quantity).toFixed(2)));
-    const timestamp = new Date().toISOString().split('T')[0];
-
-    const updatedTanks = state.tanks.map(t => {
-      if (t.id === adj.tankId) {
-        return { ...t, currentLevel: newLevel };
-      }
-      return t;
-    });
-
-    const newMovement = {
-      id: `mov_${generateUUID()}`,
-      tankId: adj.tankId,
-      fuelType: targetTank.fuelType,
-      type: 'adjustment' as const,
-      quantity: adj.quantity,
-      previousLevel: targetTank.currentLevel,
-      newLevel,
-      referenceId: `ADJ-${Date.now().toString().slice(-4)}`,
-      note: adj.reason,
-      createdAt: timestamp
-    };
-
-    const newAuditLog = {
-      id: `log_${generateUUID()}`,
-      userId: currentUser.id,
-      userName: currentUser.name,
-      action: 'STOCK_ADJUSTMENT',
-      details: `Adjusted ${targetTank.name} by ${adj.quantity >= 0 ? '+' : ''}${adj.quantity}L. Reason: ${adj.reason}`,
-      createdAt: new Date().toISOString()
-    };
-
-    setState(prev => ({
-      ...prev,
-      tanks: updatedTanks,
-      movements: [newMovement, ...prev.movements],
-      auditLogs: [newAuditLog, ...prev.auditLogs]
-    }));
+    const { data, error } = await apiCalibrateTank(adj.tankId, newLevel, adj.reason);
+    if (error || !data?.success) {
+      showToast(error || 'Failed to adjust stock on server.', 'error');
+      return;
+    }
+    await refreshStationState();
 
     showToast(`Stock adjustment of ${adj.quantity >= 0 ? '+' : ''}${adj.quantity}L applied to ${targetTank.name}.`);
   };
 
   // 5. Update Tank Price
-  const handleUpdateTankPrice = (tankId: string, newPrice: number) => {
-    const updatedTanks = state.tanks.map(t => {
-      if (t.id === tankId) return { ...t, unitPrice: newPrice };
-      return t;
-    });
+  const handleUpdateTankPrice = async (tankId: string, newPrice: number) => {
+    const { data, error } = await apiUpdateTankPrice(tankId, newPrice);
+    if (error || !data?.success) {
+      showToast(error || 'Failed to update tank price on server.', 'error');
+      return;
+    }
 
-    setState(prev => ({
-      ...prev,
-      tanks: updatedTanks,
-      auditLogs: [
-        {
-          id: `log_${generateUUID()}`,
-          userId: currentUser.id,
-          userName: currentUser.name,
-          action: 'PRICE_CHANGE',
-          details: `Updated fuel price for tank ${tankId} to $${newPrice}/L`,
-          createdAt: new Date().toISOString()
-        },
-        ...prev.auditLogs
-      ]
-    }));
+    await refreshStationState();
 
     showToast(`Fuel price updated to $${newPrice.toFixed(2)}/L.`);
   };
 
   // 6. Customers & Payments
-  const handleAddCustomer = (cData: { name: string; phone: string; company?: string; creditLimit: number }) => {
-    const newCust: Customer = {
-      id: `c_${Date.now()}`,
-      ...cData,
-      currentBalance: 0,
-      status: 'active',
-      createdAt: new Date().toISOString().split('T')[0]
-    };
+  const handleAddCustomer = async (cData: { name: string; phone: string; company?: string; creditLimit: number }) => {
+    const { data, error } = await apiAddCustomer(cData);
+    if (error || !data?.success) {
+      showToast(error || 'Failed to add customer on server.', 'error');
+      return;
+    }
 
-    setState(prev => ({ ...prev, customers: [newCust, ...prev.customers] }));
+    await refreshStationState();
     showToast(`Customer ${cData.name} registered.`);
   };
 
-  const handleRecordPayment = (pData: { customerId: string; amount: number; paymentMethod: PaymentMethod; reference?: string }) => {
+  const handleRecordPayment = async (pData: { customerId: string; amount: number; paymentMethod: PaymentMethod; reference?: string }) => {
     const targetCust = state.customers.find(c => c.id === pData.customerId);
     if (!targetCust) return;
 
-    const updatedCustomers = state.customers.map(c => {
-      if (c.id === pData.customerId) {
-        return { ...c, currentBalance: Math.max(0, parseFloat((c.currentBalance - pData.amount).toFixed(2))) };
-      }
-      return c;
-    });
+    const { data, error } = await apiRecordPayment(pData.customerId, pData.amount, pData.paymentMethod, pData.reference);
+    if (error || !data?.success) {
+      showToast(error || 'Failed to record customer payment on server.', 'error');
+      return;
+    }
 
-    const newPayment = {
-      id: `pay_${Date.now()}`,
-      customerId: pData.customerId,
-      customerName: targetCust.name,
-      amount: pData.amount,
-      paymentMethod: pData.paymentMethod,
-      reference: pData.reference,
-      collectedBy: currentUser.name,
-      createdAt: new Date().toISOString()
-    };
-
-    setState(prev => ({
-      ...prev,
-      customers: updatedCustomers,
-      customerPayments: [newPayment, ...prev.customerPayments]
-    }));
+    await refreshStationState();
     showToast(`Payment of $${pData.amount.toFixed(2)} collected from ${targetCust.name}.`);
   };
 
   // 7. Expenses
-  const handleAddExpense = (expData: { category: ExpenseCategory; description: string; amount: number; receiptNumber?: string }) => {
-    const newExp: Expense = {
-      id: `exp_${Date.now()}`,
-      ...expData,
-      addedBy: currentUser.name,
-      createdAt: new Date().toISOString().split('T')[0]
-    };
+  const handleAddExpense = async (expData: { category: ExpenseCategory; description: string; amount: number; receiptNumber?: string }) => {
+    const { data, error } = await apiAddExpense({
+      title: expData.description,
+      category: expData.category,
+      amount: expData.amount,
+      paymentMethod: 'cash',
+      recipient: expData.description,
+      note: expData.receiptNumber
+    });
 
-    setState(prev => ({ ...prev, expenses: [newExp, ...prev.expenses] }));
+    if (error || !data?.success) {
+      showToast(error || 'Failed to record expense on server.', 'error');
+      return;
+    }
+
+    await refreshStationState();
     showToast(`Expense of $${expData.amount.toFixed(2)} recorded.`);
   };
 
   // 8. Staff & Roles
-  const handleAddUser = (uData: { name: string; email: string; role: UserRole; pin: string }) => {
-    const newUser: User = {
-      id: `u_${Date.now()}`,
-      ...uData,
-      status: 'active',
-      lastLogin: 'Never'
-    };
+  const handleAddUser = async (uData: { name: string; username?: string; email: string; role: UserRole; pin: string }) => {
+    const cleanUsername = (uData.username || uData.name.toLowerCase().replace(/\s+/g, '_')).trim().toLowerCase();
+    const cleanEmail = (uData.email || `${cleanUsername}@gasflow.so`).trim().toLowerCase();
 
-    setState(prev => ({ ...prev, users: [...prev.users, newUser] }));
-    showToast(`Staff account created for ${uData.name}.`);
+    const { data, error } = await apiRegister({
+      name: uData.name.trim(),
+      username: cleanUsername,
+      email: cleanEmail,
+      password: uData.pin,
+      pin: uData.pin,
+      role: uData.role
+    });
+
+    if (error || !data?.success) {
+      showToast(error || 'Failed to create staff account on server.', 'error');
+      return;
+    }
+
+    const newUser = data.user;
+    await refreshStationState();
+    showToast(
+      language === 'so'
+        ? `Shaqaale cusub ayaa la abuuray: ${uData.name} (${uData.role.toUpperCase()}) — Username: ${cleanUsername}`
+        : `Staff account created for ${uData.name} (${uData.role.toUpperCase()}) — Username: ${cleanUsername}`,
+      'success'
+    );
   };
 
-  const handleToggleUserStatus = (userId: string) => {
-    setState(prev => ({
-      ...prev,
-      users: prev.users.map(u => {
-        if (u.id === userId) {
-          return { ...u, status: (u.status === 'active' ? 'inactive' : 'active') as 'active' | 'inactive' };
-        }
-        return u;
-      })
-    }));
+  const handleToggleUserStatus = async (userId: string) => {
+    const target = state.users.find(u => u.id === userId);
+    if (!target) return;
+    const newStatus = target.status === 'active' ? 'inactive' : 'active';
+
+    const { data, error } = await apiToggleUserStatus(userId, newStatus);
+    if (error || !data?.success) {
+      showToast(error || 'Failed to update user status on server.', 'error');
+      return;
+    }
+
+    await refreshStationState();
+    showToast(`User ${target.name} status updated to ${newStatus}.`);
   };
 
   // 9. Sync Engine
-  const handleTriggerSync = () => {
-    setState(prev => ({
-      ...prev,
-      syncEvents: prev.syncEvents.map(evt => ({ ...evt, syncStatus: 'synced' as const })),
-      sales: prev.sales.map(s => ({ ...s, syncStatus: 'synced' as const }))
-    }));
-
-    showToast('Replication complete! All outbox events committed to PostgreSQL.');
+  const handleTriggerSync = async () => {
+    const ok = await refreshStationState();
+    showToast(
+      ok
+        ? (language === 'so' ? 'Xogta qalabkan waa la isku xiray server-ka saldhigga.' : 'This device is now synced with the station server.')
+        : (language === 'so' ? 'Isku-xirku wuu fashilmay. Hubi internet-ka.' : 'Sync failed. Check the network.'),
+      ok ? 'success' : 'error'
+    );
   };
 
   // 10. Settings & Backup/Restore
-  const handleUpdateStation = (st: StationConfig) => {
-    setState(prev => ({ ...prev, station: st }));
+  const handleUpdateStation = async (st: StationConfig) => {
+    const { data, error } = await apiUpdateStation(st);
+    if (error || !data?.success) {
+      showToast(error || 'Failed to update station profile.', 'error');
+      return;
+    }
+    await refreshStationState();
     showToast('Station profile updated.');
   };
 
@@ -906,6 +722,7 @@ export default function Home() {
               <CustomersView
                 customers={state.customers}
                 payments={state.customerPayments}
+                sales={state.sales}
                 currentUser={currentUser}
                 language={language}
                 onAddCustomer={handleAddCustomer}
@@ -930,6 +747,7 @@ export default function Home() {
                 tanks={state.tanks}
                 expenses={state.expenses}
                 customers={state.customers}
+                payments={state.customerPayments}
                 auditLogs={state.auditLogs}
                 language={language}
               />
@@ -971,7 +789,10 @@ export default function Home() {
               <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-2 sm:p-4">
                 <AuthPortal
                   users={state.users}
-                  onLogin={handleLogin}
+                  onLogin={(user) => {
+                    handleLogin(user);
+                    // handleLogin sets the view based on role automatically
+                  }}
                   onRegister={handleRegister}
                   language={language}
                   onLanguageChange={setLanguage}

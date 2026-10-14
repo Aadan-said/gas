@@ -1,76 +1,67 @@
 /**
- * GET  /api/users    - List users (admin/manager only)
- * POST /api/users    - Add staff user (admin only) — delegates to /api/auth/register
+ * GET   /api/users     - List staff users (Admin & Manager only)
+ * PATCH /api/users     - Modify user status active/inactive (Admin only)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { authenticateRequest } from '@/lib/auth';
+import { listUsers, updateUserStatus } from '@/lib/server-db';
 
 export async function GET(req: NextRequest) {
-  const role = req.headers.get('x-user-role') ?? '';
+  const { session, errorResponse } = await authenticateRequest(req, {
+    allowedRoles: ['admin', 'manager']
+  });
 
-  if (!['admin', 'manager'].includes(role)) {
-    return NextResponse.json({ error: 'Permission denied.' }, { status: 403 });
+  if (errorResponse) {
+    return errorResponse;
   }
 
   try {
-    const { prisma } = await import('@/lib/prisma');
-    const users = await prisma.user.findMany({
-      select: {
-        id: true,
-        name: true,
-        username: true,
-        email: true,
-        role: true,
-        status: true,
-        phone: true,
-        branch: true,
-        lastLoginAt: true,
-        createdAt: true,
-      },
-      orderBy: { createdAt: 'asc' },
-    });
+    const users = await listUsers(session.organizationId || session.stationId);
     return NextResponse.json({ users });
-  } catch {
-    return NextResponse.json({ users: [], offline: true });
+  } catch (err) {
+    console.error('[/api/users GET]', err);
+    return NextResponse.json({ error: 'Failed to retrieve staff directory.' }, { status: 500 });
   }
 }
 
 export async function PATCH(req: NextRequest) {
-  const role = req.headers.get('x-user-role') ?? '';
-  const userId = req.headers.get('x-user-id') ?? '';
-  const userName = req.headers.get('x-user-name') ?? '';
+  const { user: caller, session, errorResponse } = await authenticateRequest(req, {
+    allowedRoles: ['admin']
+  });
 
-  if (role !== 'admin') {
-    return NextResponse.json({ error: 'Only admins can modify user accounts.' }, { status: 403 });
-  }
-
-  const body = await req.json();
-  const { targetUserId, status } = body;
-
-  if (!targetUserId || !['active', 'inactive'].includes(status)) {
-    return NextResponse.json({ error: 'targetUserId and valid status (active|inactive) are required.' }, { status: 400 });
+  if (errorResponse) {
+    return errorResponse;
   }
 
   try {
-    const { prisma } = await import('@/lib/prisma');
-    const user = await prisma.user.update({
-      where: { id: targetUserId },
-      data: { status },
-      select: { id: true, name: true, status: true },
-    });
+    const body = await req.json();
+    const { targetUserId, status } = body;
 
-    await prisma.auditLog.create({
-      data: {
-        id: `log_${Date.now()}`,
-        userId,
-        userName,
-        action: 'USER_STATUS_CHANGE',
-        details: `User ${user.name} status set to ${status}`,
-      },
-    });
+    if (!targetUserId || !['active', 'inactive'].includes(status)) {
+      return NextResponse.json(
+        { error: 'Valid targetUserId and status (active | inactive) are required.' },
+        { status: 400 }
+      );
+    }
 
-    return NextResponse.json({ success: true, user });
-  } catch {
-    return NextResponse.json({ success: true, offline: true });
+    // Prevent admin from locking their own account
+    if (caller.id === targetUserId && status === 'inactive') {
+      return NextResponse.json(
+        { error: 'Cannot deactivate your own Administrator account.' },
+        { status: 400 }
+      );
+    }
+
+    const updatedUser = await updateUserStatus(
+      targetUserId,
+      status,
+      caller.organizationId || session.organizationId || session.stationId
+    );
+    return NextResponse.json({ success: true, user: updatedUser });
+  } catch (err: unknown) {
+    console.error('[/api/users PATCH]', err);
+    const msg = err instanceof Error ? err.message : 'Internal server error.';
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

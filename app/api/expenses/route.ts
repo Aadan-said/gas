@@ -1,69 +1,63 @@
 /**
- * GET  /api/expenses   - List expenses
- * POST /api/expenses   - Add an expense
+ * GET  /api/expenses  - List expenses (Admin, Manager, Accountant only — Cashiers forbidden)
+ * POST /api/expenses  - Add expense (Admin, Manager, Accountant only)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { generateUUID } from '@/lib/storage';
+import { authenticateRequest } from '@/lib/auth';
+import { listExpenses, createExpenseTransaction } from '@/lib/server-db';
+import type { ExpenseCategory } from '@/lib/types';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const { session, errorResponse } = await authenticateRequest(req, {
+    allowedRoles: ['admin', 'manager', 'accountant']
+  });
+  if (errorResponse) return errorResponse;
+
   try {
-    const { prisma } = await import('@/lib/prisma');
-    const expenses = await prisma.expense.findMany({ orderBy: { createdAt: 'desc' } });
+    const expenses = await listExpenses(session.organizationId || session.stationId);
     return NextResponse.json({ expenses });
-  } catch {
-    return NextResponse.json({ expenses: [], offline: true });
+  } catch (err) {
+    console.error('[/api/expenses GET]', err);
+    return NextResponse.json({ error: 'Failed to retrieve expenses.' }, { status: 500 });
   }
 }
 
 export async function POST(req: NextRequest) {
-  const role = req.headers.get('x-user-role') ?? '';
-  const userName = req.headers.get('x-user-name') ?? '';
-  const userId = req.headers.get('x-user-id') ?? '';
-
-  if (!['admin', 'manager', 'accountant'].includes(role)) {
-    return NextResponse.json({ error: 'Permission denied.' }, { status: 403 });
-  }
-
-  const body = await req.json();
-  const { title, category, amount, paymentMethod, recipient, note, receiptUrl } = body;
-
-  if (!title || !category || !amount || !paymentMethod || !recipient) {
-    return NextResponse.json({ error: 'title, category, amount, paymentMethod, and recipient are required.' }, { status: 400 });
-  }
+  const { user, session, errorResponse } = await authenticateRequest(req, {
+    allowedRoles: ['admin', 'manager', 'accountant']
+  });
+  if (errorResponse) return errorResponse;
 
   try {
-    const { prisma } = await import('@/lib/prisma');
-    const expense = await prisma.expense.create({
-      data: {
-        id: generateUUID(),
-        title,
-        category,
-        amount,
-        paymentMethod,
-        recipient,
-        approvedBy: userName,
-        note: note ?? null,
-        receiptUrl: receiptUrl ?? null,
-      },
-    });
+    const body = await req.json();
+    const { category, description, amount, receiptNumber } = body;
 
-    await prisma.auditLog.create({
-      data: {
-        id: generateUUID(),
-        userId,
-        userName,
-        action: 'EXPENSE_ADD',
-        details: `Expense: ${title} ($${amount}) — ${category}`,
+    const parsedAmount = parseFloat(amount);
+    if (!category || !description || isNaN(parsedAmount) || parsedAmount <= 0) {
+      return NextResponse.json(
+        { error: 'Valid category, description, and positive amount are required.' },
+        { status: 400 }
+      );
+    }
+
+    const expense = await createExpenseTransaction(
+      session.organizationId || session.stationId,
+      {
+        category: category as ExpenseCategory,
+        description: description.trim(),
+        amount: parsedAmount,
+        addedBy: user.name,
+        receiptNumber: receiptNumber?.trim()
       },
-    });
+      user.id,
+      user.name
+    );
 
     return NextResponse.json({ success: true, expense }, { status: 201 });
-  } catch {
-    return NextResponse.json({
-      success: true,
-      offline: true,
-      expense: { id: generateUUID(), title, category, amount, paymentMethod, recipient, approvedBy: userName, note, createdAt: new Date().toISOString() },
-    }, { status: 201 });
+  } catch (err: unknown) {
+    console.error('[/api/expenses POST]', err);
+    const msg = err instanceof Error ? err.message : 'Failed to record expense.';
+    return NextResponse.json({ error: msg }, { status: 400 });
   }
 }
