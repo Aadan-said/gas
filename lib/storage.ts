@@ -17,8 +17,8 @@ import {
 export const INITIAL_STATION: StationConfig = {
   id: 'st_001',
   name: 'Kaalimaha Shidaalka Gaalkacyo',
-  branch: 'Gaalkacyo, Galmudug — Xaafadda Suuqa Weyn',
-  address: 'Wadada Boosaaso, Gaalkacyo Koonfur, Galmudug',
+  branch: 'Gaalkacyo, Mudug — Xaafadda Suuqa Weyn',
+  address: 'Wadada Boosaaso, Gaalkacyo Koonfur, Mudug',
   phone: '+252 090 2100000',
   taxRate: 0,
   currency: 'USD',

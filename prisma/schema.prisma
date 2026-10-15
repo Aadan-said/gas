@@ -1,12 +1,12 @@
 // GasFlow Petroleum Station Management System — Enterprise Prisma Schema
-// Supports PostgreSQL (Production / Cloud Sync) and Local SQLite Station Engine
+// Supports PostgreSQL (Production / Neon / Supabase Cloud Sync) and Edge Architecture
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql" // or "sqlite" for standalone edge kiosk
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -36,6 +36,7 @@ model User {
   phone            String?
   branch           String?
   twoFactorEnabled Boolean      @default(false)
+  organizationId   String       @default("st_001")
   lastLoginAt      DateTime?
   createdAt        DateTime     @default(now())
   updatedAt        DateTime     @updatedAt
@@ -44,6 +45,9 @@ model User {
   deliveries       FuelDelivery[]
   auditLogs        AuditLog[]
   shifts           Shift[]
+
+  @@index([organizationId])
+  @@index([username])
 }
 
 model Session {
@@ -54,6 +58,8 @@ model Session {
   ipAddress    String?
   userAgent    String?
   createdAt    DateTime @default(now())
+
+  @@index([userId])
 }
 
 // ── 2. TANKS & TELEMETRY ─────────────────────────────────
@@ -73,9 +79,11 @@ enum TankStatus {
 
 model Tank {
   id             String       @id @default(uuid())
-  tankNumber     String       @unique
+  organizationId String       @default("st_001")
+  tankNumber     String
   fuelType       FuelType
   name           String
+  unit           String       @default("litres") // litres for PMS/AGO/DPK, kg/cylinder for LPG
   capacity       Float
   currentLevel   Float
   unitPrice      Float
@@ -88,6 +96,9 @@ model Tank {
   sales          Sale[]
   deliveries     FuelDelivery[]
   movements      InventoryMovement[]
+
+  @@unique([organizationId, tankNumber])
+  @@index([organizationId])
 }
 
 // ── 3. SALES & TRANSACTIONS (POS) ─────────────────────────
@@ -117,12 +128,14 @@ enum SyncStatus {
 model Sale {
   id            String        @id @default(uuid())
   saleNumber    String        @unique
-  stationId     String
-  deviceId      String
+  stationId     String        // Organization / Station ID
+  deviceId      String        @default("main_pos")
   cashierId     String
   cashier       User          @relation(fields: [cashierId], references: [id])
+  cashierName   String?
   customerId    String?
   customer      Customer?     @relation(fields: [customerId], references: [id])
+  customerName  String?
   fuelType      FuelType
   tankId        String
   tank          Tank          @relation(fields: [tankId], references: [id])
@@ -136,12 +149,17 @@ model Sale {
   voidedAt      DateTime?
   syncStatus    SyncStatus    @default(synced)
   createdAt     DateTime      @default(now())
+
+  @@index([stationId])
+  @@index([cashierId])
+  @@index([createdAt])
 }
 
 // ── 4. DELIVERIES & INVENTORY MOVEMENTS ───────────────────
 
 model FuelDelivery {
   id             String    @id @default(uuid())
+  organizationId String    @default("st_001")
   tankId         String
   tank           Tank      @relation(fields: [tankId], references: [id])
   fuelType       FuelType
@@ -152,9 +170,12 @@ model FuelDelivery {
   invoiceNumber  String
   receivedById   String
   receivedBy     User      @relation(fields: [receivedById], references: [id])
-  receivedAt     DateTime  @default(now())
   dipstickBefore Float?
   dipstickAfter  Float?
+  receivedAt     DateTime  @default(now())
+
+  @@index([organizationId])
+  @@index([tankId])
 }
 
 enum MovementType {
@@ -165,78 +186,84 @@ enum MovementType {
 }
 
 model InventoryMovement {
-  id            String       @id @default(uuid())
-  tankId        String
-  tank          Tank         @relation(fields: [tankId], references: [id])
-  fuelType      FuelType
-  type          MovementType
-  quantity      Float
-  previousLevel Float
-  newLevel      Float
-  referenceId   String
-  note          String?
-  createdAt     DateTime     @default(now())
+  id             String       @id @default(uuid())
+  organizationId String       @default("st_001")
+  tankId         String
+  tank           Tank         @relation(fields: [tankId], references: [id])
+  fuelType       FuelType
+  type           MovementType
+  quantity       Float
+  previousLevel  Float
+  newLevel       Float
+  referenceId    String
+  note           String?
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId])
+  @@index([tankId])
 }
 
 // ── 5. CUSTOMERS & CREDIT LEDGER ─────────────────────────
 
 model Customer {
   id             String            @id @default(uuid())
+  organizationId String            @default("st_001")
   name           String
   phone          String
   email          String?
   company        String?
   creditLimit    Float             @default(500)
   currentBalance Float             @default(0)
+  status         String            @default("active") // active, suspended
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
 
   sales          Sale[]
   payments       CustomerPayment[]
+
+  @@index([organizationId])
+  @@index([phone])
 }
 
 model CustomerPayment {
-  id            String        @id @default(uuid())
-  customerId    String
-  customer      Customer      @relation(fields: [customerId], references: [id])
-  amount        Float
-  paymentMethod PaymentMethod
-  reference     String?
-  receivedBy    String
-  note          String?
-  createdAt     DateTime      @default(now())
+  id             String        @id @default(uuid())
+  organizationId String        @default("st_001")
+  customerId     String
+  customer       Customer      @relation(fields: [customerId], references: [id])
+  customerName   String?
+  amount         Float
+  paymentMethod  PaymentMethod
+  reference      String?
+  collectedBy    String
+  note           String?
+  createdAt      DateTime      @default(now())
+
+  @@index([organizationId])
+  @@index([customerId])
 }
 
 // ── 6. FINANCE & EXPENSES ────────────────────────────────
 
-enum ExpenseCategory {
-  fuel_purchase
-  generator
-  electricity
-  staff_salary
-  maintenance
-  taxes_licenses
-  station_supplies
-  other
-}
-
 model Expense {
-  id            String          @id @default(uuid())
-  title         String
-  category      ExpenseCategory
-  amount        Float
-  paymentMethod PaymentMethod
-  recipient     String
-  approvedBy    String
-  note          String?
-  receiptUrl    String?
-  createdAt     DateTime        @default(now())
+  id             String        @id @default(uuid())
+  organizationId String        @default("st_001")
+  category       String        // Maintenance, Electricity, Salaries, Rent, Office Supplies, Taxes, Other
+  description    String
+  amount         Float
+  addedBy        String
+  paymentMethod  PaymentMethod @default(cash)
+  receiptNumber  String?
+  createdAt      DateTime      @default(now())
+
+  @@index([organizationId])
+  @@index([createdAt])
 }
 
 // ── 7. EMPLOYEES, SHIFTS & RECONCILIATION ────────────────
 
 model Shift {
   id              String    @id @default(uuid())
+  organizationId  String    @default("st_001")
   userId          String
   user            User      @relation(fields: [userId], references: [id])
   shiftNumber     Int       @default(1)
@@ -248,20 +275,27 @@ model Shift {
   cashDiscrepancy Float?
   status          String    @default("open") // open, closed
   createdAt       DateTime  @default(now())
+
+  @@index([organizationId])
+  @@index([userId])
 }
 
-// ── 8. AUDIT LOGS & STATION SETTINGS ─────────────────────
+// ── 8. AUDIT LOGS, STATION CONFIG & IDEMPOTENCY ──────────
 
 model AuditLog {
-  id        String   @id @default(uuid())
-  userId    String?
-  user      User?    @relation(fields: [userId], references: [id])
-  userName  String
-  action    String
-  details   String
-  ipAddress String?
-  deviceId  String?
-  createdAt DateTime @default(now())
+  id             String   @id @default(uuid())
+  organizationId String   @default("st_001")
+  userId         String?
+  user           User?    @relation(fields: [userId], references: [id])
+  userName       String
+  action         String
+  details        String
+  ipAddress      String?
+  deviceId       String?
+  createdAt      DateTime @default(now())
+
+  @@index([organizationId])
+  @@index([createdAt])
 }
 
 model StationConfig {
@@ -273,15 +307,28 @@ model StationConfig {
   taxRate        Float    @default(0)
   currency       String   @default("USD")
   currencySymbol String   @default("$")
+  createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 }
 
+model IdempotencyKey {
+  key            String   @id
+  organizationId String
+  response       String
+  createdAt      DateTime @default(now())
+
+  @@index([organizationId])
+}
+
 model SyncQueueEvent {
-  id         String     @id @default(uuid())
-  entityType String
-  entityId   String
-  action     String
-  payload    String
-  syncStatus SyncStatus @default(pending_local)
-  createdAt  DateTime   @default(now())
+  id             String     @id @default(uuid())
+  organizationId String     @default("st_001")
+  entityType     String
+  entityId       String
+  action         String
+  payload        String
+  syncStatus     SyncStatus @default(pending_local)
+  createdAt      DateTime   @default(now())
+
+  @@index([organizationId])
 }

@@ -77,7 +77,7 @@ export const StaffView: React.FC<StaffViewProps> = ({
       task: 'Users & Roles Management',
       admin: 'Full Manage',
       cashier: 'No Access',
-      manager: 'Limited Read',
+      manager: 'Full Manage',
       accountant: 'No Access'
     },
     {
@@ -305,10 +305,9 @@ export const StaffView: React.FC<StaffViewProps> = ({
                   onChange={e => setRole(e.target.value as UserRole)}
                   className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white font-semibold"
                 >
-                  <option value="cashier">Cashier (Point of Sale, Shift Entry)</option>
-                  <option value="manager">Manager (Stock, Deliveries, Voids)</option>
-                  <option value="accountant">Accountant (Ledgers, Debts, Finance)</option>
-                  <option value="admin">Administrator (Complete System Access)</option>
+                  <option value="manager">Maareeye (Manager — Maamulka Guud, Qiimaha & Shaqaalaha)</option>
+                  <option value="accountant">Xisaabiye (Accountant — Maaliyadda, Deymaha & Xisaab-xirka)</option>
+                  <option value="cashier">Shuboole / Cashier (POS-ka Taleefanka, Iibka Shidaalka)</option>
                 </select>
               </div>
 

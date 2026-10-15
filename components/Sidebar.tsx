@@ -80,7 +80,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           badgeColor: 'bg-amber-50 text-amber-600 border border-amber-200',
           roles: ['admin', 'manager', 'accountant', 'cashier']
         },
-        { id: 'settings',  label: t.settings,    icon: Settings,        roles: ['admin'] }
+        { id: 'settings',  label: t.settings,    icon: Settings,        roles: ['admin', 'manager'] }
       ]
     }
   ];

@@ -18,7 +18,7 @@ export const translations = {
     offline: 'Offline',
     lanMode: 'LAN Server',
     mainStation: 'Main Station',
-    
+
     // Navigation
     dashboard: 'Dashboard',
     sales: 'Sales',
@@ -31,7 +31,7 @@ export const translations = {
     settings: 'Settings',
     syncEngine: 'Sync Engine',
     logout: 'Logout',
-    
+
     // Dashboard
     welcomeGreeting: 'Welcome',
     whatsHappening: "Here's what's happening at your station today.",
@@ -47,7 +47,7 @@ export const translations = {
     fuelStockLevel: 'Fuel Stock Level',
     viewAll: 'View All',
     recentTransactions: 'Recent Transactions',
-    
+
     // Sales POS
     newSale: 'New Sale',
     customerOptional: 'Customer (Optional)',
@@ -66,7 +66,7 @@ export const translations = {
     sahal: 'Sahal',
     card: 'Card',
     other: 'Debt / Credit',
-    
+
     // Tanks
     tanksManagement: 'Tanks Management',
     addTank: 'Add Tank',
@@ -78,7 +78,7 @@ export const translations = {
     normal: 'Normal',
     low: 'Low',
     critical: 'Critical',
-    
+
     // Customers
     customerManagement: 'Customer Management',
     addCustomer: 'Add Customer',
@@ -88,7 +88,7 @@ export const translations = {
     creditLimit: 'Credit Limit',
     recordPayment: 'Record Payment',
     accountStatement: 'Statement',
-    
+
     // Finance
     expenses: 'Expenses',
     addExpense: 'Add Expense',
@@ -98,7 +98,7 @@ export const translations = {
     description: 'Description',
     amount: 'Amount',
     addedBy: 'Added By',
-    
+
     // Staff & Roles
     staffPermissions: 'Staff & Permissions',
     addStaff: 'Add Staff',
@@ -108,7 +108,7 @@ export const translations = {
     cashier: 'Cashier',
     manager: 'Manager',
     accountant: 'Accountant',
-    
+
     // Reports & Statements
     customerReport: 'Customer & Debt Report',
     fuelStockReport: 'Fuel Stock & Movements',
@@ -124,14 +124,14 @@ export const translations = {
     exportCSV: 'Export CSV',
     printReport: 'Print Report',
     cylinder: 'Cylinder',
-    
+
     // Receipt
     salesReceipt: 'Sales Receipt',
     printReceipt: 'Print Receipt',
     date: 'Date',
     paid: 'PAID',
     voided: 'VOIDED',
-    
+
     // Sync
     syncStatus: 'Sync Status',
     synced: 'Synced',
@@ -153,12 +153,12 @@ export const translations = {
     login: 'Gal nidaamka',
     rememberMe: 'I xusuuso',
     forgotPassword: 'Ma ilowday furaha?',
-    worksOffline: 'Wuxuu ku shaqeeyaa Offline • Offline-First • PWA',
+    worksOffline: 'Wuxuu ku shaqeeynayaa Offline • Offline-First • PWA',
     online: 'Khadka wuu furan yahay',
     offline: 'Khad la\'aan (Offline)',
     lanMode: 'LAN Server Xarunta',
     mainStation: 'Kaalinta Dhexe',
-    
+
     // Navigation
     dashboard: 'Guud ahaan',
     sales: 'Iibka (POS)',
@@ -171,10 +171,10 @@ export const translations = {
     settings: 'Dejinta Kaalinta',
     syncEngine: 'Mashiinka Sync-ga',
     logout: 'Ka bax',
-    
+
     // Dashboard
     welcomeGreeting: 'Kusoo dhawoow',
-    whatsHappening: 'Waa kuwan waxa ka socda kaalintaada shidaalka maanta.',
+    whatsHappening: 'Waa kuwan xogta ku saabsan waxa ka socda kaalintaada shidaalka maanta.',
     totalSalesToday: 'Wadarta Iibka (Maanta)',
     fuelSoldLitres: 'Shidaalka La Iibiyay (Litir)',
     cashInHand: 'Lacag Caddaan / Golis',
@@ -187,7 +187,7 @@ export const translations = {
     fuelStockLevel: 'Heerka Shidaalka Haamaha',
     viewAll: 'Eeg Dhammaan',
     recentTransactions: 'Iibkii ugu dambeeyay',
-    
+
     // Sales POS
     newSale: 'Iib Cusub',
     customerOptional: 'Macmiilka (Ikhtiyaari)',
@@ -199,14 +199,14 @@ export const translations = {
     litres: 'Litir / Dhululubo',
     unitPrice: 'Qiimaha Litirkiiba',
     total: 'Wadarta Lacagta',
-    processPayment: 'Xaqiiji & Bixi Lacagta',
+    processPayment: 'Xaqiijin & Bixi Lacagta',
     cash: 'Caddaan',
     evcPlus: 'EVC Plus (HMD)',
     edahab: 'eDahab (STL)',
     sahal: 'Golis Sahal',
     card: 'Kaadh / Bank',
     other: 'Deyn (Credit)',
-    
+
     // Tanks
     tanksManagement: 'Maamulka Haamaha Shidaalka',
     addTank: 'Ku dar Haan',
@@ -218,7 +218,7 @@ export const translations = {
     normal: 'Caadi',
     low: 'Hooseeya',
     critical: 'Khatar ah',
-    
+
     // Customers
     customerManagement: 'Maamulka Macaamiisha & Deynta',
     addCustomer: 'Macmiil Cusub',
@@ -228,7 +228,7 @@ export const translations = {
     creditLimit: 'Xadka Deynta',
     recordPayment: 'Qabo Lacag-bixin',
     accountStatement: 'Bayaanka Xisaabta',
-    
+
     // Finance
     expenses: 'Kharashka Kaalinta',
     addExpense: 'Kharash Cusub',
@@ -238,7 +238,7 @@ export const translations = {
     description: 'Faahfaahin',
     amount: 'Lacagta ($)',
     addedBy: 'Qofka qoray',
-    
+
     // Staff & Roles
     staffPermissions: 'Shaqaalaha & Xeerarka Gelitaanka',
     addStaff: 'Ku dar Shaqaale',
@@ -248,7 +248,7 @@ export const translations = {
     cashier: 'Khasnaji (Cashier)',
     manager: 'Maamulaha Guud (Manager)',
     accountant: 'Xisaabiye (Accountant)',
-    
+
     // Reports & Statements
     customerReport: 'Warbixinta Macaamiisha & Deynta',
     fuelStockReport: 'Heerka Haamaha & Dhaqdhaqaaqa',
@@ -271,7 +271,7 @@ export const translations = {
     date: 'Taariikhda',
     paid: 'WAA LA BIXIYAY',
     voided: 'WAA LA TIRTIRAY',
-    
+
     // Sync
     syncStatus: 'Xaaladda Sync-ga',
     synced: 'Waa la wadaagay (Synced)',

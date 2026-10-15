@@ -86,6 +86,8 @@ const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'customers:manage',
     'finance:view', 'finance:manage',
     'reports:view',
+    'staff:manage',
+    'settings:manage',
     'audit:view',
   ],
   cashier: [
