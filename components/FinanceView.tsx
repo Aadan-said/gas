@@ -178,8 +178,37 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
       </div>
 
       {/* Main Table */}
-      <div className="bg-white p-4.5 sm:p-5 rounded-2xl border border-[#ECEEF2] shadow-sm">
-        <div className="overflow-x-auto">
+      <div className="bg-white p-4 sm:p-5 rounded-2xl border border-[#ECEEF2] shadow-sm">
+        {/* Mobile View: Expense Cards (Screen < md) */}
+        <div className="md:hidden space-y-2.5">
+          {expenses.map(exp => (
+            <div key={exp.id} className="p-3.5 rounded-2xl border border-slate-200 bg-[#F8F9FA] space-y-2 shadow-2xs">
+              <div className="flex items-center justify-between text-xs">
+                <span className="px-2 py-0.5 rounded-full bg-slate-200/70 text-slate-800 font-bold text-[10px]">
+                  {exp.category}
+                </span>
+                <span className="font-black text-slate-900 text-sm">
+                  ${exp.amount.toFixed(2)}
+                </span>
+              </div>
+              <div className="text-xs font-semibold text-slate-800">
+                {exp.description}
+              </div>
+              <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1.5 border-t border-slate-200/60">
+                <span>{exp.createdAt}</span>
+                <span>{exp.receiptNumber || '—'}</span>
+              </div>
+            </div>
+          ))}
+          {expenses.length === 0 && (
+            <div className="text-center py-6 text-slate-400 text-xs">
+              Weli ma jiro kharash la qoray.
+            </div>
+          )}
+        </div>
+
+        {/* Desktop View: Full Enterprise Table (Screen >= md) */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider border-b border-slate-200">
               <tr>

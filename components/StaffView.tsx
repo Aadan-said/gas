@@ -151,8 +151,50 @@ export const StaffView: React.FC<StaffViewProps> = ({
       </div>
 
       {/* Staff Table */}
-      <div className="bg-white p-6 rounded-2xl border border-[#ECEEF2] shadow-sm">
-        <div className="overflow-x-auto">
+      <div className="bg-white p-4 sm:p-6 rounded-2xl border border-[#ECEEF2] shadow-sm">
+        {/* Mobile View: Staff Cards (Screen < md) */}
+        <div className="md:hidden space-y-3">
+          {users.map(u => {
+            const pill = rolePills[u.role] || rolePills.cashier;
+            return (
+              <div key={u.id} className="p-3.5 rounded-2xl border border-slate-200 bg-[#F8F9FA] space-y-2.5 shadow-2xs">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-full bg-slate-200 text-slate-700 font-bold flex items-center justify-center text-xs">
+                      {u.name.split(' ').map(n => n[0]).join('')}
+                    </div>
+                    <div>
+                      <div className="font-bold text-slate-900 text-xs">{u.name}</div>
+                      <div className="text-[10px] text-slate-400">{u.email}</div>
+                    </div>
+                  </div>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${pill.bg} ${pill.text}`}>
+                    {u.role}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between text-xs pt-2 border-t border-slate-200/60">
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                    u.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'
+                  }`}>
+                    {u.status}
+                  </span>
+                  {u.id !== currentUser.id && (
+                    <button
+                      onClick={() => onToggleUserStatus(u.id)}
+                      className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-semibold shadow-2xs"
+                    >
+                      {u.status === 'active' ? 'Deactivate' : 'Activate'}
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Desktop View: Full Table (Screen >= md) */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider border-b border-slate-200">
               <tr>

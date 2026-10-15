@@ -653,7 +653,7 @@ export default function Home() {
         />
 
         {/* Content Wrapper */}
-        <div className="flex-1 flex flex-col min-w-0">
+        <div className="flex-1 flex flex-col min-w-0 w-full max-w-full overflow-hidden">
           {/* Universal Header */}
           <Header
             currentUser={currentUser}
@@ -671,7 +671,7 @@ export default function Home() {
           />
 
           {/* Active View */}
-          <main className="flex-1 p-3 sm:p-3.5 lg:p-4 pb-36 sm:pb-40 lg:pb-8 overflow-y-auto">
+          <main className="flex-1 p-2.5 sm:p-4 lg:p-6 pb-32 sm:pb-36 lg:pb-8 overflow-y-auto w-full max-w-full overflow-x-hidden">
             {currentView === 'dashboard' && (
               <DashboardView
                 currentUser={currentUser}
@@ -816,8 +816,10 @@ export default function Home() {
 
       {/* Mobile Bottom Navigation Bar (Screen < lg) - Floating Island Dock with clear separation and gap */}
       <nav
-        className="fixed bottom-2.5 inset-x-2.5 sm:bottom-3 sm:inset-x-6 z-40 max-w-lg mx-auto bg-white/95 backdrop-blur-xl border border-slate-200/90 rounded-2xl shadow-[0_12px_36px_rgba(15,23,42,0.14),0_2px_8px_rgba(15,23,42,0.04)] lg:hidden transition-all"
-        style={{ marginBottom: 'env(safe-area-inset-bottom, 0px)' }}
+        className={`fixed bottom-2 inset-x-2 sm:bottom-3 sm:inset-x-6 z-40 max-w-lg mx-auto bg-white/95 backdrop-blur-xl border border-slate-200/90 rounded-2xl shadow-[0_12px_36px_rgba(15,23,42,0.14),0_2px_8px_rgba(15,23,42,0.04)] lg:hidden transition-all duration-200 ${
+          isMobileMenuOpen ? 'opacity-0 pointer-events-none translate-y-6' : 'opacity-100 translate-y-0'
+        }`}
+        style={{ marginBottom: 'max(env(safe-area-inset-bottom, 0px), 8px)' }}
         aria-label="Mobile Navigation"
       >
         <div className="flex items-center justify-around px-1 py-1">

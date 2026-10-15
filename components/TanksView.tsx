@@ -149,7 +149,59 @@ export const TanksView: React.FC<TanksViewProps> = ({
 
       {/* Tanks Management Table */}
       <div className="bg-white p-4.5 sm:p-5 rounded-2xl border border-[#ECEEF2] shadow-sm">
-        <div className="overflow-x-auto">
+        {/* Mobile View: Clean Tank Cards (Screen < md) */}
+        <div className="md:hidden space-y-3">
+          {tanks.map(tank => {
+            const pct = Math.round((tank.currentLevel / tank.capacity) * 100);
+            const isLow = pct < 30;
+            const isLPG = tank.fuelType === 'LPG';
+            return (
+              <div key={tank.id} className="p-3.5 rounded-2xl border border-slate-200 bg-[#F8F9FA] space-y-3 shadow-2xs">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-blue-600" />
+                    <span className="font-mono font-bold text-slate-800 text-xs">{tank.tankNumber}</span>
+                    <span className="font-bold text-slate-900 text-xs">{tank.name}</span>
+                  </div>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                    isLow ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'
+                  }`}>
+                    {isLow ? (language === 'so' ? 'Hooseeya' : 'Low') : (language === 'so' ? 'Caadi' : 'Normal')}
+                  </span>
+                </div>
+
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between text-xs text-slate-500">
+                    <span>Heerka: <strong className="text-slate-800">{pct}%</strong></span>
+                    <span>{tank.currentLevel.toLocaleString()} / {tank.capacity.toLocaleString()} {isLPG ? 'Dhululubo' : 'L'}</span>
+                  </div>
+                  <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                    <div style={{ width: `${pct}%` }} className={`h-full ${isLow ? 'bg-amber-500' : 'bg-emerald-500'}`} />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-2 border-t border-slate-200/70 text-xs">
+                  <div>
+                    <span className="text-slate-400 text-[11px] block">{language === 'so' ? 'Qiimaha' : 'Price'}:</span>
+                    <strong className="text-slate-900 font-black text-sm">${tank.unitPrice.toFixed(2)}{isLPG ? (language === 'so' ? '/Dhululubo' : '/Cyl') : '/L'}</strong>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setPriceModalTank(tank);
+                      setNewPrice(tank.unitPrice.toString());
+                    }}
+                    className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs shadow-2xs"
+                  >
+                    {language === 'so' ? 'Bedel Qiimaha' : 'Update Price'}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Desktop View: Full Enterprise Table (Screen >= md) */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider border-b border-slate-200">
               <tr>
@@ -233,11 +285,11 @@ export const TanksView: React.FC<TanksViewProps> = ({
       </div>
 
       {/* Tank Levels Radial Gauges (Exact section from mockup!) */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs">
-        <h2 className="text-base font-bold text-slate-900 mb-6">
+      <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200/80 shadow-xs">
+        <h2 className="text-base font-bold text-slate-900 mb-4 sm:mb-6">
           {t.tankLevels}
         </h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6">
           {tanks.map(tank => {
             const pct = Math.round((tank.currentLevel / tank.capacity) * 100);
             const badge = fuelBadges[tank.fuelType] || fuelBadges.PMS;

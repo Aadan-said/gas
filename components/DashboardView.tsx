@@ -424,7 +424,45 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
           </div>
 
-          <div className="overflow-x-auto flex-1">
+          {/* Mobile View: Clean Transaction Cards (Screen < md) */}
+          <div className="md:hidden space-y-2 mt-2">
+            {sales.slice(0, 5).map(sale => {
+              const fc = FUEL_COLORS[sale.fuelType] || FUEL_COLORS.PMS;
+              const pm = PAYMENT_COLORS[sale.paymentMethod] || PAYMENT_COLORS.cash;
+              return (
+                <div
+                  key={sale.id}
+                  onClick={() => onSelectSaleReceipt(sale)}
+                  className="p-3 rounded-xl border border-slate-200 bg-[#F8F9FA] hover:bg-slate-100/60 transition-colors cursor-pointer space-y-2"
+                >
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-mono font-bold text-blue-600">{sale.saleNumber}</span>
+                    <span className="font-black text-slate-900">${sale.totalAmount.toFixed(2)}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1 border-t border-slate-200/60">
+                    <div className="flex items-center gap-1.5 font-semibold text-slate-800">
+                      <span className="w-2 h-2 rounded-full" style={{ background: fc.fill }} />
+                      <span>{sale.fuelType} · {sale.litres.toFixed(1)} L</span>
+                    </div>
+                    <span
+                      className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded border"
+                      style={{ background: pm.bg, color: pm.text, borderColor: pm.border }}
+                    >
+                      {sale.paymentMethod}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+            {sales.length === 0 && (
+              <div className="text-center py-6 text-slate-400 text-xs">
+                No sales recorded yet. Click &quot;+ New Sale&quot; to begin.
+              </div>
+            )}
+          </div>
+
+          {/* Desktop View: Full Clean Table (Screen >= md) */}
+          <div className="hidden md:block overflow-x-auto flex-1">
             <table className="table-clean">
               <thead>
                 <tr>

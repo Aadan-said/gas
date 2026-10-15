@@ -243,14 +243,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* 2. Mobile Backdrop */}
       {isOpenMobile && (
         <div
-          className="fixed inset-0 z-40 bg-slate-900/30 backdrop-blur-xs lg:hidden transition-opacity"
+          className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs lg:hidden transition-opacity"
           onClick={onCloseMobile}
         />
       )}
 
       {/* 3. Mobile Slide-Over Drawer */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-72 bg-white flex flex-col shadow-2xl border-r border-[#ECEEF2] lg:hidden transform transition-transform duration-300 ease-in-out ${
+        className={`fixed inset-y-0 left-0 z-50 w-72 max-w-[82vw] bg-white flex flex-col shadow-2xl border-r border-[#ECEEF2] lg:hidden transform transition-transform duration-300 ease-out ${
           isOpenMobile ? 'translate-x-0' : '-translate-x-full pointer-events-none'
         }`}
       >

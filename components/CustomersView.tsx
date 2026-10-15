@@ -291,7 +291,68 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* Mobile View: Clean Customer Cards (Screen < md) */}
+        <div className="md:hidden space-y-3">
+          {filtered.map(cust => {
+            return (
+              <div key={cust.id} className="p-3.5 rounded-2xl border border-slate-200 bg-[#F8F9FA] space-y-2.5 shadow-2xs">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-bold text-slate-900 text-sm">{cust.name}</div>
+                    {cust.company && (
+                      <div className="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5">
+                        <Building2 className="w-3 h-3 text-slate-400" />
+                        <span>{cust.company}</span>
+                      </div>
+                    )}
+                  </div>
+                  <span className={`font-black text-sm px-2.5 py-1 rounded-lg ${
+                    cust.currentBalance > 0
+                      ? 'bg-rose-50 text-rose-600 border border-rose-200'
+                      : 'bg-emerald-50 text-emerald-600 border border-emerald-200'
+                  }`}>
+                    ${cust.currentBalance.toFixed(2)}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between text-xs text-slate-500 pt-1.5 border-t border-slate-200/70">
+                  <span className="font-mono">{cust.phone}</span>
+                  <span>Xadka: <b>${cust.creditLimit.toFixed(2)}</b></span>
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-1">
+                  <button
+                    onClick={() => setStatementCustomer(cust)}
+                    className="px-2.5 py-1 rounded-lg bg-white border border-slate-200 text-slate-700 font-bold text-xs flex items-center gap-1 shadow-2xs cursor-pointer"
+                  >
+                    <FileText className="w-3 h-3 text-slate-500" />
+                    <span>{language === 'so' ? 'Bayaan' : 'Statement'}</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setPayModalCustomer(cust);
+                      setPayAmount(cust.currentBalance > 0 ? cust.currentBalance.toString() : '');
+                      setPayRef(`SAHAL-${Date.now().toString().slice(-4)}`);
+                      setPayMethod('sahal');
+                    }}
+                    className="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-1 shadow-xs cursor-pointer"
+                  >
+                    <DollarSign className="w-3 h-3" />
+                    <span>{language === 'so' ? 'Qabo Lacag' : 'Record Pay'}</span>
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+          {filtered.length === 0 && (
+            <div className="text-center py-6 text-slate-400 text-xs">
+              {language === 'so' ? 'Wax macmiil ah lagama helin raadinta.' : 'No customers matched your search.'}
+            </div>
+          )}
+        </div>
+
+        {/* Desktop View: Full Enterprise Table (Screen >= md) */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider border-b border-slate-200">
               <tr>

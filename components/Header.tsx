@@ -98,59 +98,59 @@ export const Header: React.FC<HeaderProps> = ({
   const initials = currentUser.name.split(' ').map(n => n[0]).join('').slice(0, 2);
 
   return (
-    <header className="h-[62px] px-4 sm:px-6 flex items-center justify-between sticky top-0 z-30 shrink-0 bg-white/95 backdrop-blur-md border-b border-[#ECEEF2]">
+    <header className="h-[58px] sm:h-[62px] px-2.5 sm:px-4 md:px-6 flex items-center justify-between sticky top-0 z-30 shrink-0 bg-white/95 backdrop-blur-md border-b border-[#ECEEF2] w-full max-w-full overflow-hidden">
       {/* Left side: Mobile menu, brand logo, clean Search Input */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-1.5 sm:gap-3 min-w-0 flex-1 mr-2">
         {/* Mobile Hamburger Menu Button */}
         <button
           onClick={onToggleMobileMenu}
-          className="lg:hidden p-2 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
+          className="lg:hidden p-1.5 sm:p-2 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
           aria-label="Open Navigation"
         >
           <Menu className="w-5 h-5" />
         </button>
 
         {/* Mobile Brand Logo */}
-        <div className="flex items-center gap-2 lg:hidden">
-          <div className="w-7 h-7 rounded-lg bg-[#111318] flex items-center justify-center shrink-0">
-            <Flame className="w-4 h-4 text-white fill-white" />
+        <div className="flex items-center gap-1.5 lg:hidden shrink-0">
+          <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-[#111318] flex items-center justify-center shrink-0">
+            <Flame className="w-3.5 h-3.5 text-white fill-white" />
           </div>
-          <span className="font-bold text-[14px] tracking-tight text-slate-900 hidden xs:inline">
+          <span className="font-bold text-[13px] sm:text-[14px] tracking-tight text-slate-900 hidden xs:inline">
             GasFlow
           </span>
         </div>
 
-        {/* Clean CRM Search Bar */}
-        <div className="relative flex items-center">
-          <div className="absolute left-3.5 flex items-center pointer-events-none text-slate-400">
-            <Search className="w-4 h-4 text-slate-400" />
+        {/* Clean CRM Search Bar (auto-adjusts width) */}
+        <div className="relative flex items-center flex-1 max-w-[140px] xs:max-w-[180px] sm:max-w-xs md:max-w-sm">
+          <div className="absolute left-2.5 sm:left-3.5 flex items-center pointer-events-none text-slate-400">
+            <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400" />
           </div>
           <input
             type="text"
             value={searchQuery}
             onChange={e => onSearchChange(e.target.value)}
-            placeholder={language === 'so' ? 'Raadi wax kasta...' : 'Search for something...'}
+            placeholder={language === 'so' ? 'Raadi...' : 'Search...'}
             style={{
-              paddingLeft: '38px',
-              paddingRight: searchQuery ? '32px' : '14px'
+              paddingLeft: '32px',
+              paddingRight: searchQuery ? '28px' : '10px'
             }}
-            className="w-40 xs:w-52 sm:w-64 md:w-72 lg:w-80 h-9 bg-[#F8F9FA] hover:bg-[#F2F4F7] focus:bg-white text-slate-900 placeholder:text-slate-400 text-xs sm:text-[13px] font-medium rounded-xl border border-[#ECEEF2] focus:border-slate-400 focus:outline-none transition-all shadow-2xs"
+            className="w-full h-8 sm:h-9 bg-[#F8F9FA] hover:bg-[#F2F4F7] focus:bg-white text-slate-900 placeholder:text-slate-400 text-xs sm:text-[13px] font-medium rounded-xl border border-[#ECEEF2] focus:border-slate-400 focus:outline-none transition-all shadow-2xs"
           />
           {searchQuery && (
             <button
               onClick={() => onSearchChange('')}
-              className="absolute right-2.5 p-1 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-200/60 transition-colors cursor-pointer"
+              className="absolute right-2 p-0.5 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-200/60 transition-colors cursor-pointer"
               title={language === 'so' ? 'Tirtir raadinta' : 'Clear search'}
               aria-label="Clear search"
             >
-              <X className="w-3.5 h-3.5" />
+              <X className="w-3 h-3" />
             </button>
           )}
         </div>
       </div>
 
       {/* Right controls */}
-      <div className="flex items-center gap-2 sm:gap-2.5">
+      <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
         {/* Date Display Pill (FlowAI/CloseCRM style) */}
         <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-white border border-[#ECEEF2] rounded-xl text-xs font-medium text-slate-600 shadow-2xs">
           <Calendar className="w-3.5 h-3.5 text-slate-400" />
@@ -158,19 +158,20 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Network Mode Simulator Pill */}
-        <div className="relative" ref={netRef}>
+        <div className="relative shrink-0" ref={netRef}>
           <button
             onClick={() => setNetworkDropdownOpen(!networkDropdownOpen)}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[11.5px] font-semibold transition-all cursor-pointer border shadow-2xs"
+            className="flex items-center gap-1 sm:gap-1.5 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-xl text-[11px] sm:text-[11.5px] font-semibold transition-all cursor-pointer border shadow-2xs"
             style={{
               background: net.bg,
               borderColor: net.border,
               color: net.color
             }}
+            title={net.label}
           >
-            <net.Icon className="w-3.5 h-3.5" />
+            <net.Icon className="w-3.5 h-3.5 shrink-0" />
             <span className="hidden sm:inline">{net.label}</span>
-            <ChevronDown className="w-3 h-3 opacity-60" />
+            <ChevronDown className="w-3 h-3 opacity-60 hidden sm:block" />
           </button>
 
           {networkDropdownOpen && (
@@ -219,7 +220,7 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Language Toggle Pill */}
         <button
           onClick={() => onLanguageChange(language === 'en' ? 'so' : 'en')}
-          className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[11.5px] font-semibold transition-all bg-white hover:bg-slate-50 border border-[#ECEEF2] text-slate-700 shadow-2xs cursor-pointer"
+          className="flex items-center gap-1 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-xl text-[11px] sm:text-[11.5px] font-semibold transition-all bg-white hover:bg-slate-50 border border-[#ECEEF2] text-slate-700 shadow-2xs cursor-pointer shrink-0"
         >
           <Globe className="w-3.5 h-3.5 text-slate-400" />
           <span>{language.toUpperCase()}</span>
@@ -227,18 +228,18 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Notifications Bell */}
         <button
-          className="w-8 h-8 rounded-xl flex items-center justify-center relative transition-all bg-white hover:bg-slate-50 border border-[#ECEEF2] text-slate-600 shadow-2xs cursor-pointer"
+          className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl flex items-center justify-center relative transition-all bg-white hover:bg-slate-50 border border-[#ECEEF2] text-slate-600 shadow-2xs cursor-pointer shrink-0"
           aria-label="Notifications"
         >
           <Bell className="w-3.5 h-3.5" />
-          <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-red-500" />
+          <span className="absolute top-1 right-1 sm:top-1.5 sm:right-1.5 w-1.5 h-1.5 rounded-full bg-red-500" />
         </button>
 
         {/* User Profile Switcher */}
-        <div className="relative" ref={userRef}>
+        <div className="relative shrink-0" ref={userRef}>
           <button
             onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-            className="flex items-center gap-2 p-1 sm:px-2 sm:py-1 rounded-xl bg-white hover:bg-slate-50 border border-[#ECEEF2] shadow-2xs transition-all cursor-pointer"
+            className="flex items-center gap-1.5 p-0.5 sm:px-2 sm:py-1 rounded-xl bg-white hover:bg-slate-50 border border-[#ECEEF2] shadow-2xs transition-all cursor-pointer"
           >
             <div className="w-7 h-7 rounded-lg bg-[#111318] text-white flex items-center justify-center font-bold text-[11px] shrink-0">
               {initials}
@@ -253,6 +254,7 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
             <ChevronDown className="w-3 h-3 text-slate-400 hidden sm:block" />
           </button>
+
 
           {userDropdownOpen && (
             <div className="absolute right-0 mt-2 w-64 rounded-2xl p-2 z-50 modal-content bg-white border border-[#ECEEF2] shadow-xl">
