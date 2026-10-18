@@ -13,7 +13,8 @@ export const metadata: Metadata = {
   description: "Production architecture • Multi-device • Offline-first • Role-based security",
   manifest: "/manifest.json",
   icons: {
-    icon: "/favicon.ico"
+    icon: "/icon-192.png",
+    apple: "/icon-192.png"
   }
 };
 

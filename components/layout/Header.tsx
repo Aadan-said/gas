@@ -387,39 +387,46 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
 
           {networkDropdownOpen && (
-            <div className="absolute right-0 mt-2 w-72 rounded-2xl p-2 z-50 modal-content bg-white border border-[#ECEEF2] shadow-xl">
-              <div className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                Network Topology Simulator
+            <>
+              {/* Mobile overlay backdrop */}
+              <div
+                className="fixed inset-0 z-40 bg-slate-900/25 backdrop-blur-[1px] sm:hidden"
+                onClick={() => setNetworkDropdownOpen(false)}
+              />
+              <div className="fixed inset-x-3 top-14 sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 w-auto sm:w-80 rounded-2xl p-2 z-50 modal-content bg-white border border-[#ECEEF2] shadow-2xl max-w-[calc(100vw-24px)] sm:max-w-none">
+                <div className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  {language === 'so' ? 'Qaab-dhismeedka Isku-xirka (Network Simulator)' : 'Network Topology Simulator'}
+                </div>
+                {(['cloud_online', 'lan_only', 'offline_pwa'] as NetworkMode[]).map(mode => {
+                  const cfg = networkConfig[mode];
+                  const active = networkMode === mode;
+                  return (
+                    <button
+                      key={mode}
+                      onClick={() => { onNetworkModeChange(mode); setNetworkDropdownOpen(false); }}
+                      className="w-full text-left p-2.5 rounded-xl flex items-start gap-2.5 transition-all mb-0.5 cursor-pointer hover:bg-slate-50"
+                      style={active ? { background: cfg.bg, border: `1px solid ${cfg.border}` } : { border: '1px solid transparent' }}
+                    >
+                      <div className="p-1.5 rounded-lg mt-0.5 shrink-0" style={{ background: cfg.bg, border: `1px solid ${cfg.border}` }}>
+                        <cfg.Icon className="w-3.5 h-3.5" style={{ color: cfg.color }} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-[12px] font-semibold text-slate-900 leading-snug">
+                          {mode === 'cloud_online' ? (language === 'so' ? '1. Cloud & Internet Online' : '1. Cloud & Internet Online') :
+                           mode === 'lan_only'      ? (language === 'so' ? '2. Local LAN Only (Xarunta)' : '2. Local LAN Only (Offline cloud)') :
+                                                      (language === 'so' ? '3. IndexedDB Offline Cache' : '3. IndexedDB Offline Cache')}
+                        </div>
+                        <div className="text-[11px] mt-0.5 text-slate-500 leading-tight">
+                          {mode === 'cloud_online' ? (language === 'so' ? 'Xogta toos ayaa Cloud-ka loogu dirayaa' : 'Synchronizing with live backend') :
+                           mode === 'lan_only'      ? (language === 'so' ? 'Server-ka xarunta ayaa maamulaya aaladaha' : 'Local server manages multi-device') :
+                                                      (language === 'so' ? 'Aaladdan ayey ku kaydsan tahay, dib buu u diri doonaa' : 'Queued locally, auto-sync upon link')}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
-              {(['cloud_online', 'lan_only', 'offline_pwa'] as NetworkMode[]).map(mode => {
-                const cfg = networkConfig[mode];
-                const active = networkMode === mode;
-                return (
-                  <button
-                    key={mode}
-                    onClick={() => { onNetworkModeChange(mode); setNetworkDropdownOpen(false); }}
-                    className="w-full text-left p-2.5 rounded-xl flex items-start gap-2.5 transition-all mb-0.5 cursor-pointer hover:bg-slate-50"
-                    style={active ? { background: cfg.bg, border: `1px solid ${cfg.border}` } : { border: '1px solid transparent' }}
-                  >
-                    <div className="p-1.5 rounded-lg mt-0.5 shrink-0" style={{ background: cfg.bg, border: `1px solid ${cfg.border}` }}>
-                      <cfg.Icon className="w-3.5 h-3.5" style={{ color: cfg.color }} />
-                    </div>
-                    <div>
-                      <div className="text-[12px] font-semibold text-slate-900">
-                        {mode === 'cloud_online' ? '1. Cloud & Internet Online' :
-                         mode === 'lan_only'      ? '2. Local LAN Only (Offline cloud)' :
-                                                    '3. IndexedDB Offline Cache'}
-                      </div>
-                      <div className="text-[11px] mt-0.5 text-slate-500">
-                        {mode === 'cloud_online' ? 'Synchronizing with live backend' :
-                         mode === 'lan_only'      ? 'Local server manages multi-device' :
-                                                    'Queued locally, auto-sync upon link'}
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
+            </>
           )}
         </div>
 

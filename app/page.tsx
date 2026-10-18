@@ -785,6 +785,7 @@ export default function Home() {
             {currentView === 'sync' && (
               <SyncEngineModal
                 syncEvents={state.syncEvents}
+                sales={state.sales}
                 networkMode={state.networkMode}
                 onNetworkModeChange={m => setState(prev => ({ ...prev, networkMode: m }))}
                 onTriggerSync={handleTriggerSync}
