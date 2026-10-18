@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   getInitialState,
   saveState,
@@ -86,6 +86,17 @@ export default function Home() {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authInitialMode, setAuthInitialMode] = useState<'login' | 'register' | 'forgot' | '2fa'>('login');
+  const mainRef = useRef<HTMLElement>(null);
+
+  // Automatically reset scroll position to top whenever navigating between screens/views
+  useEffect(() => {
+    if (mainRef.current) {
+      mainRef.current.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    }
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    }
+  }, [currentView]);
 
   // Toast system
   const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'success') => {
@@ -615,7 +626,7 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F4F6FA] text-slate-900 flex flex-col font-sans">
+    <div className="min-h-screen lg:h-screen lg:overflow-hidden bg-[#F4F6FA] text-slate-900 flex flex-col font-sans">
       {/* Toast Stack */}
       <div className="fixed bottom-6 right-6 z-[100] flex flex-col gap-2 items-end pointer-events-none">
         {toasts.map(toast => (
@@ -638,7 +649,7 @@ export default function Home() {
       </div>
 
       {/* Main Container */}
-      <div className="flex flex-1 min-h-screen">
+      <div className="flex flex-1 min-h-0 h-full overflow-hidden">
         {/* Universal Responsive Sidebar (desktop sticky & mobile slide-over) */}
         <Sidebar
           currentView={currentView}
@@ -653,7 +664,7 @@ export default function Home() {
         />
 
         {/* Content Wrapper */}
-        <div className="flex-1 flex flex-col min-w-0 w-full max-w-full overflow-hidden">
+        <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
           {/* Universal Header */}
           <Header
             currentUser={currentUser}
@@ -668,10 +679,18 @@ export default function Home() {
             onToggleMobileMenu={() => setIsMobileMenuOpen(prev => !prev)}
             onOpenAuthPortal={() => setCurrentView('auth')}
             onLogout={handleLogout}
+            sales={state.sales}
+            tanks={state.tanks}
+            customers={state.customers}
+            expenses={state.expenses}
           />
 
           {/* Active View */}
-          <main className="flex-1 p-2.5 sm:p-4 lg:p-6 pb-32 sm:pb-36 lg:pb-8 overflow-y-auto w-full max-w-full overflow-x-hidden">
+          <main 
+            ref={mainRef}
+            className="flex-1 p-2.5 sm:p-4 lg:p-6 pb-32 sm:pb-36 lg:pb-8 overflow-y-auto w-full max-w-full overflow-x-hidden min-h-0"
+          >
+            <div key={currentView} className="view-transition-container w-full">
             {currentView === 'dashboard' && (
               <DashboardView
                 currentUser={currentUser}
@@ -801,6 +820,7 @@ export default function Home() {
                 />
               </div>
             )}
+            </div>
 
             {/* Extra breathing buffer for mobile screens so all cards complete well above tabs */}
             <div className="h-4 lg:hidden" aria-hidden="true" />

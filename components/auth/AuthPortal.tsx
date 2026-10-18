@@ -451,7 +451,7 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
                   {[
                     { icon: Fuel, text: language === 'so' ? 'Iibka Dhuumaha (POS)' : 'Pump Terminal POS' },
                     { icon: Database, text: language === 'so' ? 'Mugga Haamaha & Booyadaha' : 'Tank Telemetry' },
-                    { icon: Wallet, text: language === 'so' ? 'Khasnadda & EVC Plus' : 'Cash & Mobile Payments' },
+                    { icon: Wallet, text: language === 'so' ? 'Khasnadda & Sahal' : 'Cash & Mobile Payments' },
                     { icon: ShieldCheck, text: language === 'so' ? 'RBAC Awoodaha Shaqaalaha' : 'Staff RBAC Security' }
                   ].map((feat, idx) => {
                     const Icon = feat.icon;

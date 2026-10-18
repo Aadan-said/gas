@@ -12,10 +12,12 @@ import {
   CheckCircle2,
   AlertTriangle,
   History,
-  TrendingDown
+  TrendingDown,
+  X
 } from 'lucide-react';
 import { Tank, FuelDelivery, FuelTypeCode, User } from '@/lib/types';
 import { translations, Language } from '@/lib/translations';
+import { Modal } from '@/components/ui/Modal';
 
 interface TanksViewProps {
   tanks: Tank[];
@@ -54,10 +56,10 @@ export const TanksView: React.FC<TanksViewProps> = ({
 
   // Delivery form state
   const [selectedTankId, setSelectedTankId] = useState<string>(tanks[0]?.id || '');
-  const [deliveryLitres, setDeliveryLitres] = useState<string>('5000');
+  const [deliveryLitres, setDeliveryLitres] = useState<string>('');
   const [costPerLitre, setCostPerLitre] = useState<string>('1.05');
-  const [supplierName, setSupplierName] = useState<string>('Puntland Petroleum Boosaaso');
-  const [invoiceNumber, setInvoiceNumber] = useState<string>('PPB-2026-001');
+  const [supplierName, setSupplierName] = useState<string>('');
+  const [invoiceNumber, setInvoiceNumber] = useState<string>('');
 
   // Calibrate state
   const [calibTankId, setCalibTankId] = useState<string>(tanks[0]?.id || '');
@@ -338,219 +340,291 @@ export const TanksView: React.FC<TanksViewProps> = ({
       </div>
 
       {/* Delivery Modal */}
-      {deliveryModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 text-blue-600 rounded-xl">
-                <Truck className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="font-bold text-slate-900 text-base">{t.addDelivery}</h3>
-                <p className="text-xs text-slate-400">Receive bulk fuel shipment into tank</p>
-              </div>
-            </div>
-
-            <form onSubmit={handleDeliverySubmit} className="space-y-3.5 text-xs">
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Select Tank</label>
-                <select
-                  value={selectedTankId}
-                  onChange={e => setSelectedTankId(e.target.value)}
-                  className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white"
-                >
-                  {tanks.map(tank => (
-                    <option key={tank.id} value={tank.id}>
-                      {tank.tankNumber} - {tank.name} (Current: {tank.currentLevel} L / Max: {tank.capacity} L)
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">Litres Received</label>
-                  <input
-                    type="number"
-                    value={deliveryLitres}
-                    onChange={e => setDeliveryLitres(e.target.value)}
-                    className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white font-bold"
-                  />
-                </div>
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">Cost / Litre ($)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={costPerLitre}
-                    onChange={e => setCostPerLitre(e.target.value)}
-                    className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white font-bold"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Supplier Company</label>
-                <input
-                  type="text"
-                  value={supplierName}
-                  onChange={e => setSupplierName(e.target.value)}
-                  className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white"
-                />
-              </div>
-
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Invoice / Delivery Note #</label>
-                <input
-                  type="text"
-                  value={invoiceNumber}
-                  onChange={e => setInvoiceNumber(e.target.value)}
-                  className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white"
-                />
-              </div>
-
-              <div className="p-3 bg-blue-50/60 rounded-xl border border-blue-100 flex justify-between font-bold text-blue-900">
-                <span>Total Delivery Cost:</span>
-                <span>${((parseFloat(deliveryLitres) || 0) * (parseFloat(costPerLitre) || 0)).toFixed(2)}</span>
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setDeliveryModalOpen(false)}
-                  className="px-4 py-2 rounded-xl text-slate-600 font-bold hover:bg-slate-100"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-md shadow-blue-500/20"
-                >
-                  Record Delivery
-                </button>
-              </div>
-            </form>
+      <Modal
+        isOpen={deliveryModalOpen}
+        onClose={() => setDeliveryModalOpen(false)}
+        title={t.addDelivery}
+        subtitle={
+          language === 'so'
+            ? 'Shidaalka jumlad ahaan loogu shubayo haamaha xarunta (Gaalkacyo).'
+            : 'Receive bulk fuel shipment into tank storage.'
+        }
+        icon={<Truck className="w-5 h-5" />}
+        maxWidth="md"
+      >
+        <form onSubmit={handleDeliverySubmit} className="space-y-4 text-xs">
+          <div>
+            <label className="block font-bold text-slate-700 mb-1.5">
+              {language === 'so' ? 'Dooro Haanta' : 'Select Tank'}
+            </label>
+            <select
+              value={selectedTankId}
+              onChange={e => setSelectedTankId(e.target.value)}
+              className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
+            >
+              {tanks.map(tank => (
+                <option key={tank.id} value={tank.id}>
+                  {tank.tankNumber} - {tank.name} (Hadda: {tank.currentLevel.toLocaleString()} L / Max: {tank.capacity.toLocaleString()} L)
+                </option>
+              ))}
+            </select>
           </div>
-        </div>
-      )}
 
-      {/* Calibrate Dipstick Modal */}
-      {calibrateModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-amber-100 text-amber-600 rounded-xl">
-                <SlidersHorizontal className="w-5 h-5" />
+          {/* Live Tank Telemetry Badge in Modal */}
+          {targetTank && (
+            <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/90 space-y-2 text-xs">
+              <div className="flex justify-between items-center text-slate-600">
+                <span>{language === 'so' ? 'Heerka Hadda (Current):' : 'Current Stock:'}</span>
+                <span className="font-bold text-slate-900">{targetTank.currentLevel.toLocaleString()} L</span>
               </div>
-              <div>
-                <h3 className="font-bold text-slate-900 text-base">{t.calibrateDipstick}</h3>
-                <p className="text-xs text-slate-400">Reconcile physical tank dipstick with system log</p>
+              <div className="flex justify-between items-center text-slate-600">
+                <span>{language === 'so' ? 'Awoodda Haanta (Max):' : 'Tank Capacity:'}</span>
+                <span className="font-bold text-slate-900">{targetTank.capacity.toLocaleString()} L</span>
               </div>
+              <div className="flex justify-between items-center text-slate-600">
+                <span>{language === 'so' ? 'Meel Bannaan (Available):' : 'Remaining Space:'}</span>
+                <span className="font-bold text-emerald-600">
+                  {Math.max(0, targetTank.capacity - targetTank.currentLevel).toLocaleString()} L
+                </span>
+              </div>
+              {parseFloat(deliveryLitres) > 0 && (
+                <div className="pt-2 border-t border-slate-200 flex justify-between items-center">
+                  <span className="font-semibold text-slate-700">
+                    {language === 'so' ? 'Heerka Cusub ee Dhalanaya:' : 'Projected Stock:'}
+                  </span>
+                  <span className={`font-black ${
+                    targetTank.currentLevel + (parseFloat(deliveryLitres) || 0) > targetTank.capacity
+                      ? 'text-rose-600'
+                      : 'text-blue-600'
+                  }`}>
+                    {(targetTank.currentLevel + (parseFloat(deliveryLitres) || 0)).toLocaleString()} L
+                  </span>
+                </div>
+              )}
+              {targetTank.currentLevel + (parseFloat(deliveryLitres) || 0) > targetTank.capacity && (
+                <p className="text-[11px] font-bold text-rose-600 pt-1">
+                  ⚠️ {language === 'so' ? 'Shidaalkani wuxuu dhaafayaa awoodda haanta!' : 'Warning: Delivery exceeds tank capacity!'}
+                </p>
+              )}
             </div>
+          )}
 
-            <form onSubmit={handleCalibSubmit} className="space-y-3.5 text-xs">
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Select Tank</label>
-                <select
-                  value={calibTankId}
-                  onChange={e => setCalibTankId(e.target.value)}
-                  className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white"
-                >
-                  {tanks.map(tank => (
-                    <option key={tank.id} value={tank.id}>
-                      {tank.name} (Current recorded: {tank.currentLevel} L)
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">
-                  Physical Measured Litres (from Dipstick)
-                </label>
-                <input
-                  type="number"
-                  placeholder={targetCalibTank.currentLevel.toString()}
-                  value={measuredLitres}
-                  onChange={e => setMeasuredLitres(e.target.value)}
-                  className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white font-bold"
-                />
-              </div>
-
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Calibration Notes / Reason</label>
-                <textarea
-                  value={calibNotes}
-                  onChange={e => setCalibNotes(e.target.value)}
-                  className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white"
-                  rows={2}
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setCalibrateModalOpen(false)}
-                  className="px-4 py-2 rounded-xl text-slate-600 font-bold hover:bg-slate-100"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold shadow-md shadow-amber-600/20"
-                >
-                  Adjust & Log Calibration
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Price Modal */}
-      {priceModalTank && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-200 space-y-4">
-            <h3 className="font-bold text-slate-900 text-base">
-              Update Price: {priceModalTank.name}
-            </h3>
+          <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                New Price per Litre ($/L)
+              <label className="block font-bold text-slate-700 mb-1.5">
+                {language === 'so' ? 'Litirrada La Keenay' : 'Litres Received'}
+              </label>
+              <input
+                type="number"
+                min="1"
+                placeholder="e.g. 5000"
+                value={deliveryLitres}
+                onChange={e => setDeliveryLitres(e.target.value)}
+                className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white font-bold text-slate-900 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="block font-bold text-slate-700 mb-1.5">
+                {language === 'so' ? 'Qiimaha / Litir ($)' : 'Cost / Litre ($)'}
               </label>
               <input
                 type="number"
                 step="0.01"
-                value={newPrice}
-                onChange={e => setNewPrice(e.target.value)}
-                className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white font-black text-lg text-blue-600"
+                min="0"
+                placeholder="1.05"
+                value={costPerLitre}
+                onChange={e => setCostPerLitre(e.target.value)}
+                className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white font-bold text-slate-900 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
               />
             </div>
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setPriceModalTank(null)}
-                className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  const p = parseFloat(newPrice);
-                  if (p > 0) {
-                    onUpdateTankPrice(priceModalTank.id, p);
-                    setPriceModalTank(null);
-                  }
-                }}
-                className="px-4 py-2 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-md shadow-blue-500/20"
-              >
-                Save New Price
-              </button>
-            </div>
+          </div>
+
+          <div>
+            <label className="block font-bold text-slate-700 mb-1.5">
+              {language === 'so' ? 'Shirkadda Shidaalka (Supplier)' : 'Supplier Company'}
+            </label>
+            <input
+              type="text"
+              placeholder={language === 'so' ? 'e.g. SomPetrol ama Boosaaso Supplies' : 'e.g. SomPetrol / Boosaaso Supplies'}
+              value={supplierName}
+              onChange={e => setSupplierName(e.target.value)}
+              className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white text-xs font-medium text-slate-800 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
+            />
+          </div>
+
+          <div>
+            <label className="block font-bold text-slate-700 mb-1.5">
+              {language === 'so' ? 'Lambarka Qaansheegta / Rasiidka (Ikhtiyaari)' : 'Invoice / Delivery Note # (Optional)'}
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. PPB-2026-001"
+              value={invoiceNumber}
+              onChange={e => setInvoiceNumber(e.target.value)}
+              className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white text-xs font-mono text-slate-800 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
+            />
+          </div>
+
+          <div className="p-3 bg-blue-50/70 rounded-xl border border-blue-100 flex justify-between font-bold text-blue-900">
+            <span>{language === 'so' ? 'Wadarta Kharashka Keenista:' : 'Total Delivery Cost:'}</span>
+            <span className="text-base">${((parseFloat(deliveryLitres) || 0) * (parseFloat(costPerLitre) || 0)).toFixed(2)}</span>
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+            <button
+              type="button"
+              onClick={() => setDeliveryModalOpen(false)}
+              className="px-4 py-2.5 rounded-xl text-slate-600 font-bold hover:bg-slate-100 cursor-pointer transition-colors"
+            >
+              {language === 'so' ? 'Ka noqo' : 'Cancel'}
+            </button>
+            <button
+              type="submit"
+              disabled={!deliveryLitres || parseFloat(deliveryLitres) <= 0 || (targetTank && targetTank.currentLevel + (parseFloat(deliveryLitres) || 0) > targetTank.capacity)}
+              className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold shadow-md shadow-blue-500/20 cursor-pointer transition-colors"
+            >
+              {language === 'so' ? 'Diiwaangeli Shidaalka' : 'Record Delivery'}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Calibrate Dipstick Modal */}
+      <Modal
+        isOpen={calibrateModalOpen}
+        onClose={() => setCalibrateModalOpen(false)}
+        title={t.calibrateDipstick}
+        subtitle={
+          language === 'so'
+            ? 'Isku-aaddinta cabbirka birta dipstick-ga iyo xogta nidaamka si sax ah.'
+            : 'Reconcile physical tank dipstick reading with digital system log.'
+        }
+        icon={<SlidersHorizontal className="w-5 h-5 text-amber-500" />}
+        maxWidth="md"
+      >
+        <form onSubmit={handleCalibSubmit} className="space-y-4 text-xs">
+          <div>
+            <label className="block font-bold text-slate-700 mb-1.5">
+              {language === 'so' ? 'Dooro Haanta' : 'Select Tank'}
+            </label>
+            <select
+              value={calibTankId}
+              onChange={e => setCalibTankId(e.target.value)}
+              className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-amber-500/20 focus:outline-none"
+            >
+              {tanks.map(tank => (
+                <option key={tank.id} value={tank.id}>
+                  {tank.name} ({language === 'so' ? 'Hadda nidaamka ku qoran:' : 'Current recorded:'} {tank.currentLevel.toLocaleString()} L)
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block font-bold text-slate-700 mb-1.5">
+              {language === 'so' ? 'Litirrada Birtu Cabbirtay (Dipstick Reading)' : 'Physical Measured Litres (from Dipstick)'}
+            </label>
+            <input
+              type="number"
+              placeholder={targetCalibTank?.currentLevel.toString()}
+              value={measuredLitres}
+              onChange={e => setMeasuredLitres(e.target.value)}
+              className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white font-black text-slate-900 text-sm focus:ring-2 focus:ring-amber-500/20 focus:outline-none"
+            />
+            {targetCalibTank && measuredLitres && (
+              <p className="text-[11px] text-slate-500 mt-1">
+                {language === 'so' ? 'Farqiga soo baxaya:' : 'Calculated variance:'}{' '}
+                <span className={parseFloat(measuredLitres) - targetCalibTank.currentLevel >= 0 ? 'text-emerald-600 font-bold' : 'text-rose-600 font-bold'}>
+                  {parseFloat(measuredLitres) - targetCalibTank.currentLevel >= 0 ? '+' : ''}
+                  {(parseFloat(measuredLitres) - targetCalibTank.currentLevel).toLocaleString()} L
+                </span>
+              </p>
+            )}
+          </div>
+
+          <div>
+            <label className="block font-bold text-slate-700 mb-1.5">
+              {language === 'so' ? 'Sababta / Xusuus-qorka Cabbirka' : 'Calibration Notes / Reason'}
+            </label>
+            <textarea
+              value={calibNotes}
+              onChange={e => setCalibNotes(e.target.value)}
+              placeholder={language === 'so' ? 'Tusaale: Cabbirka maalinlaha ah ee birta saaka' : 'e.g. Daily morning manual dipstick verification'}
+              className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white text-xs text-slate-800 focus:ring-2 focus:ring-amber-500/20 focus:outline-none"
+              rows={2}
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+            <button
+              type="button"
+              onClick={() => setCalibrateModalOpen(false)}
+              className="px-4 py-2.5 rounded-xl text-slate-600 font-bold hover:bg-slate-100 transition-colors"
+            >
+              {language === 'so' ? 'Ka noqo' : 'Cancel'}
+            </button>
+            <button
+              type="submit"
+              disabled={!measuredLitres}
+              className="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-bold shadow-md shadow-amber-600/20 transition-colors"
+            >
+              {language === 'so' ? 'Xaqiiji Cabbirka' : 'Save Calibration'}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Price Modal */}
+      <Modal
+        isOpen={!!priceModalTank}
+        onClose={() => setPriceModalTank(null)}
+        title={language === 'so' ? `Beddel Qiimaha: ${priceModalTank?.name || ''}` : `Update Price: ${priceModalTank?.name || ''}`}
+        subtitle={
+          language === 'so'
+            ? 'Qiimaha cusub ee 1-da litir ee lagu iibinayo bamka shidaalka.'
+            : 'Set new retail dispensing price per litre.'
+        }
+        icon={<Flame className="w-5 h-5 text-amber-500" />}
+        maxWidth="sm"
+      >
+        <div className="space-y-4 text-xs">
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1.5">
+              {language === 'so' ? 'Qiimaha Cusub ee 1-ka Litir ($/L)' : 'New Price per Litre ($/L)'}
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              value={newPrice}
+              onChange={e => setNewPrice(e.target.value)}
+              className="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white font-black text-xl text-blue-600 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+            <button
+              type="button"
+              onClick={() => setPriceModalTank(null)}
+              className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+            >
+              {language === 'so' ? 'Ka noqo' : 'Cancel'}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const p = parseFloat(newPrice);
+                if (p > 0 && priceModalTank) {
+                  onUpdateTankPrice(priceModalTank.id, p);
+                  setPriceModalTank(null);
+                }
+              }}
+              className="px-5 py-2 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-md shadow-blue-500/20 transition-colors"
+            >
+              {language === 'so' ? 'Xaqiiji Qiimaha' : 'Save New Price'}
+            </button>
           </div>
         </div>
-      )}
+      </Modal>
     </div>
   );
 };
+

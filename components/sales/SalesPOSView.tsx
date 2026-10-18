@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { Tank, Customer, Sale, User as AppUser, FuelTypeCode, PaymentMethod } from '@/lib/types';
 import { translations, Language } from '@/lib/translations';
+import { Modal } from '@/components/ui/Modal';
 
 interface SalesPOSViewProps {
   tanks: Tank[];
@@ -534,69 +535,62 @@ export const SalesPOSView: React.FC<SalesPOSViewProps> = ({
       </div>
 
       {/* Void Modal */}
-      {voidModalSale && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4">
-            <div className="flex items-center gap-3 text-rose-600">
-              <div className="p-2.5 bg-rose-100 rounded-xl">
-                <ShieldAlert className="w-6 h-6" />
-              </div>
-              <div>
-                <h3 className="font-bold text-slate-900 text-base">
-                  {language === 'so' ? 'Tirtir / Dib-u-celi Iibkan?' : 'Void Transaction?'}
-                </h3>
-                <p className="text-xs text-slate-500">
-                  Receipt #{voidModalSale.saleNumber} • ${voidModalSale.totalAmount.toFixed(2)}
-                </p>
-              </div>
-            </div>
-
-            <p className="text-xs text-slate-600 leading-relaxed">
+      <Modal
+        isOpen={!!voidModalSale}
+        onClose={() => setVoidModalSale(null)}
+        title={language === 'so' ? 'Tirtir / Dib-u-celi Iibkan?' : 'Void Transaction?'}
+        subtitle={voidModalSale ? `Receipt #${voidModalSale.saleNumber} • $${voidModalSale.totalAmount.toFixed(2)}` : ''}
+        icon={<ShieldAlert className="w-5 h-5 text-rose-600" />}
+        maxWidth="md"
+      >
+        {voidModalSale && (
+          <div className="space-y-4 text-xs">
+            <p className="text-xs text-slate-600 leading-relaxed p-3 bg-rose-50 rounded-xl border border-rose-100 text-rose-800">
               {language === 'so'
-                ? 'Litirka waxaa lagu celinayaa haanta shidaalka, xisaabta deyntana waa laga jarayaa. Hawshani waxay galaysaa Audit Log.'
+                ? 'Litirka waxaa lagu celinayaa haanta shidaalka, xisaabta deyntana waa laga jarayaa. Hawshani waxay si toos ah u galaysaa Audit Log-ga maamulka.'
                 : 'Fuel volume will be returned to the tank and debt deducted. This action requires approval and creates an immutable audit trail.'}
             </p>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                {language === 'so' ? 'Sababta Tirtiridda' : 'Reason for Void'}
+              <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                {language === 'so' ? 'Sababta Tirtiridda (Reason for Void)' : 'Reason for Void'}
               </label>
               <textarea
                 value={voidReason}
                 onChange={e => setVoidReason(e.target.value)}
-                placeholder={language === 'so' ? 'Geli sababta...' : 'e.g., Wrong nozzle pumped, customer changed mind...'}
+                placeholder={language === 'so' ? 'Geli sababta tirtiridda...' : 'e.g., Wrong nozzle pumped, customer changed mind...'}
                 className="w-full text-xs p-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500"
                 rows={3}
               />
             </div>
 
-            <div className="flex items-center justify-end gap-3 pt-2">
+            <div className="flex items-center justify-end gap-3 pt-2 border-t border-slate-100">
               <button
                 type="button"
                 onClick={() => setVoidModalSale(null)}
-                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100"
+                className="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition-colors"
               >
-                Cancel
+                {language === 'so' ? 'Ka noqo' : 'Cancel'}
               </button>
               <button
                 type="button"
                 onClick={() => {
                   if (!voidReason.trim()) {
-                    alert('Please provide a reason for the void.');
+                    alert(language === 'so' ? 'Fadlan geli sababta tirtiridda.' : 'Please provide a reason for the void.');
                     return;
                   }
                   onVoidSale(voidModalSale.id, voidReason);
                   setVoidModalSale(null);
                   setVoidReason('');
                 }}
-                className="px-4 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white shadow-md shadow-rose-600/20"
+                className="px-5 py-2.5 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white shadow-md shadow-rose-600/20 transition-colors"
               >
-                Confirm Void
+                {language === 'so' ? 'Xaqiiji Tirtiridda' : 'Confirm Void'}
               </button>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
     </div>
   );
 };

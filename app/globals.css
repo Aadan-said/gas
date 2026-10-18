@@ -453,6 +453,64 @@
   margin-top: 2px;
 }
 
+/* ── PAGE VIEW ENTRY ANIMATION ──────────────── */
+@keyframes pageSlideUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.97) translateY(-4px); }
+  to   { opacity: 1; transform: none; }
+}
+.page-enter,
+.view-transition-container {
+  animation: pageSlideUp 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  width: 100%;
+}
+
+/* ── NOTIFICATION PANEL ─────────────────────── */
+.notif-panel {
+  background: #FFFFFF;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  box-shadow: var(--shadow-xl);
+  animation: scaleIn 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+
+/* ── SYNC BADGE ROW (responsive flex) ──────── */
+.sync-badge-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: nowrap;
+  align-items: center;
+  flex-shrink: 0;
+}
+.sync-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ── 4-DIGIT PIN INPUT ──────────────────────── */
+.pin-input-clean {
+  font-family: 'Courier New', monospace;
+  letter-spacing: 0.3em;
+  text-align: center;
+  font-size: 18px;
+  font-weight: 700;
+}
+.pin-input-clean:not([type="text"]) {
+  -webkit-text-security: disc;
+}
+
 /* ── PRINT ─────────────────────────────────── */
 @media print {
   body * { visibility: hidden; }
@@ -471,3 +529,94 @@
   right: 16px !important;
   bottom: 16px !important;
 }
+
+/* ── MOBILE CARD ENTRY ANIMATION ────────────── */
+@keyframes cardSlideUp {
+  from { opacity: 0; transform: translateY(20px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes cardFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Staggered card animations for mobile */
+.card-enter { animation: cardSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.card-enter-delay-1 { animation: cardSlideUp 0.3s 0.05s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.card-enter-delay-2 { animation: cardSlideUp 0.3s 0.1s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.card-enter-delay-3 { animation: cardSlideUp 0.3s 0.15s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.card-enter-delay-4 { animation: cardSlideUp 0.3s 0.2s cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+/* ── INLINE FORM EXPAND ANIMATION ───────────── */
+@keyframes expandDown {
+  from { max-height: 0; opacity: 0; }
+  to   { max-height: 700px; opacity: 1; }
+}
+.form-expand {
+  animation: expandDown 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+  overflow: hidden;
+}
+
+/* ── RESPONSIVE UTILITIES ────────────────────── */
+/* Mobile-first: small screen card fixes */
+@media (max-width: 480px) {
+  /* Ensure cards don't overflow on very small screens */
+  .card, .glass-card {
+    border-radius: 14px;
+  }
+  
+  /* Better table scrolling on mobile */
+  .table-clean th,
+  .table-clean td {
+    padding: 10px 12px;
+    font-size: 11px;
+  }
+
+  /* Toast adjustments for small screens */
+  .toast {
+    min-width: 200px;
+    max-width: calc(100vw - 48px);
+    font-size: 12px;
+  }
+
+  /* Mobile notification panel centered */
+  .notif-panel {
+    width: calc(100vw - 20px) !important;
+  }
+
+  /* Bottom nav tabs fit properly */
+  .mobile-tab-label {
+    font-size: 9px;
+  }
+}
+
+/* ── STAT CARD MOBILE RESPONSIVE ────────────── */
+@media (max-width: 640px) {
+  .stat-card-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  
+  .stat-card-value {
+    font-size: 18px;
+  }
+}
+
+/* ── RESPONSIVE MEDIA ASSETS ─────────────────── */
+img, svg, video, canvas {
+  max-width: 100%;
+}
+
+/* ── SMOOTH FORM TOGGLE ──────────────────────── */
+.form-panel-enter {
+  animation: pageSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ── MOBILE-OPTIMIZED MODAL ──────────────────── */
+@media (max-width: 640px) {
+  .modal-card, .modal-content {
+    border-radius: 16px;
+    margin: 8px;
+  }
+}
+

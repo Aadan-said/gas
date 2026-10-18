@@ -79,24 +79,72 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   };
   const rConf = roleConfig[currentUser.role] || roleConfig.cashier;
 
-  // Hourly curve data for modern SVG line / area chart
-  const hourlyPoints = [
-    { hour: '06:00', amount: 120, litres: 70 },
-    { hour: '08:00', amount: 480, litres: 280 },
-    { hour: '10:00', amount: 760, litres: 440 },
-    { hour: '12:00', amount: 610, litres: 360 },
-    { hour: '14:00', amount: 890, litres: 520 },
-    { hour: '16:00', amount: 540, litres: 310 },
-    { hour: '18:00', amount: 980, litres: 580 },
-    { hour: '20:00', amount: 410, litres: 240 },
-    { hour: '22:00', amount: 190, litres: 110 }
+  // Real hourly buckets for live sales curve
+  const timeBuckets = [
+    { label: '08:00 AM', startHour: 6, endHour: 9 },
+    { label: '10:00 AM', startHour: 9, endHour: 11 },
+    { label: '12:00 PM', startHour: 11, endHour: 13 },
+    { label: '02:00 PM', startHour: 13, endHour: 15 },
+    { label: '04:00 PM', startHour: 15, endHour: 17 },
+    { label: '06:00 PM', startHour: 17, endHour: 19 },
+    { label: '08:00 PM', startHour: 19, endHour: 23 }
   ];
 
-  const maxVal = Math.max(...hourlyPoints.map(p => p.amount), 1000);
+  const hourlyPoints = timeBuckets.map(b => {
+    const bucketSales = activeSales.filter(s => {
+      const d = new Date(s.createdAt);
+      const h = d.getHours();
+      return h >= b.startHour && h < b.endHour;
+    });
+    const amount = bucketSales.reduce((sum, s) => sum + s.totalAmount, 0);
+    const litres = bucketSales.reduce((sum, s) => sum + s.litres, 0);
+    return { hour: b.label, amount, litres };
+  });
 
-  // Calculate Fuel Share for Donut Chart
+  const maxRevenue = Math.max(...hourlyPoints.map(p => p.amount), 0);
+  const maxLitres = Math.max(...hourlyPoints.map(p => p.litres), 0);
+  const chartMaxRevenue = maxRevenue > 0 ? maxRevenue * 1.2 : 100;
+  const chartMaxLitres = maxLitres > 0 ? maxLitres * 1.2 : 100;
+
+  // Dynamic peak hour determination
+  const peakPoint = hourlyPoints.reduce((max, p) => p.amount > max.amount ? p : max, hourlyPoints[0]);
+  const hasHourlyData = maxRevenue > 0;
+
+  // SVG Coordinates for spline area curve
+  const revCoords = hourlyPoints.map((p, i) => ({
+    x: (i / (hourlyPoints.length - 1)) * 660 + 20,
+    y: hasHourlyData ? Math.max(35, 185 - (p.amount / chartMaxRevenue) * 145) : 185,
+    amount: p.amount,
+    litres: p.litres,
+    hour: p.hour
+  }));
+
+  const litCoords = hourlyPoints.map((p, i) => ({
+    x: (i / (hourlyPoints.length - 1)) * 660 + 20,
+    y: hasHourlyData ? Math.max(35, 185 - (p.litres / chartMaxLitres) * 145) : 185
+  }));
+
+  const revPathD = revCoords.reduce((acc, pt, i, arr) => {
+    if (i === 0) return `M ${pt.x} ${pt.y}`;
+    const prev = arr[i - 1];
+    const cp1x = prev.x + (pt.x - prev.x) / 2;
+    const cp2x = cp1x;
+    return `${acc} C ${cp1x} ${prev.y}, ${cp2x} ${pt.y}, ${pt.x} ${pt.y}`;
+  }, '');
+
+  const revAreaD = `${revPathD} L ${revCoords[revCoords.length - 1].x} 185 L ${revCoords[0].x} 185 Z`;
+
+  const litPathD = litCoords.reduce((acc, pt, i, arr) => {
+    if (i === 0) return `M ${pt.x} ${pt.y}`;
+    const prev = arr[i - 1];
+    const cp1x = prev.x + (pt.x - prev.x) / 2;
+    const cp2x = cp1x;
+    return `${acc} C ${cp1x} ${prev.y}, ${cp2x} ${pt.y}, ${pt.x} ${pt.y}`;
+  }, '');
+
+  // Calculate Fuel Share for Donut Chart accurately
   const fuelLitresMap: Record<string, number> = { PMS: 0, AGO: 0, DPK: 0, LPG: 0 };
-  sales.forEach(s => {
+  activeSales.forEach(s => {
     if (fuelLitresMap[s.fuelType] !== undefined) {
       fuelLitresMap[s.fuelType] += s.litres;
     } else {
@@ -104,11 +152,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     }
   });
 
-  const totalFuelDistributed = Object.values(fuelLitresMap).reduce((a, b) => a + b, 0) || 1;
-  const pmsPct = Math.round(((fuelLitresMap.PMS || 0) / totalFuelDistributed) * 100) || 45;
-  const agoPct = Math.round(((fuelLitresMap.AGO || 0) / totalFuelDistributed) * 100) || 35;
-  const dpkPct = Math.round(((fuelLitresMap.DPK || 0) / totalFuelDistributed) * 100) || 12;
-  const lpgPct = 100 - (pmsPct + agoPct + dpkPct);
+  const totalFuelDistributed = Object.values(fuelLitresMap).reduce((a, b) => a + b, 0);
+  const pmsPct = totalFuelDistributed > 0 ? Math.round(((fuelLitresMap.PMS || 0) / totalFuelDistributed) * 100) : 0;
+  const agoPct = totalFuelDistributed > 0 ? Math.round(((fuelLitresMap.AGO || 0) / totalFuelDistributed) * 100) : 0;
+  const dpkPct = totalFuelDistributed > 0 ? Math.round(((fuelLitresMap.DPK || 0) / totalFuelDistributed) * 100) : 0;
+  const lpgPct = totalFuelDistributed > 0 ? Math.max(0, 100 - (pmsPct + agoPct + dpkPct)) : 0;
 
   // KPI Cards matching CloseCRM & FlowAI
   const kpis = [
@@ -261,7 +309,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
           </div>
 
-          {/* SVG Smooth Curve Area Chart */}
+          {/* SVG Dynamic Smooth Curve Area Chart */}
           <div className="relative h-56 w-full pt-4">
             <svg className="w-full h-full overflow-visible" viewBox="0 0 700 200" preserveAspectRatio="none">
               <defs>
@@ -281,44 +329,45 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <line x1="0" y1="140" x2="700" y2="140" stroke="#F1F3F6" strokeWidth="1" strokeDasharray="3 3" />
               <line x1="0" y1="185" x2="700" y2="185" stroke="#ECEEF2" strokeWidth="1" />
 
-              {/* Area 1 (Revenue) */}
-              <path
-                d="M 0 185 C 80 160, 160 80, 240 70 C 320 60, 400 120, 480 40 C 560 30, 640 130, 700 150 L 700 185 L 0 185 Z"
-                fill="url(#revenueGrad)"
-              />
-              {/* Curve 1 */}
-              <path
-                d="M 0 185 C 80 160, 160 80, 240 70 C 320 60, 400 120, 480 40 C 560 30, 640 130, 700 150"
-                fill="none"
-                stroke="#2563EB"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-              />
+              {hasHourlyData ? (
+                <>
+                  {/* Area 1 (Revenue) */}
+                  <path d={revAreaD} fill="url(#revenueGrad)" />
 
-              {/* Curve 2 (Fuel Volume Litres) */}
-              <path
-                d="M 0 185 C 80 170, 160 110, 240 100 C 320 95, 400 140, 480 80 C 560 70, 640 150, 700 165"
-                fill="none"
-                stroke="#8B5CF6"
-                strokeWidth="2"
-                strokeDasharray="4 4"
-                strokeLinecap="round"
-              />
+                  {/* Curve 1 (Revenue) */}
+                  <path d={revPathD} fill="none" stroke="#2563EB" strokeWidth="2.5" strokeLinecap="round" />
 
-              {/* Dynamic Points with dots */}
-              <circle cx="240" cy="70" r="4.5" fill="#2563EB" stroke="#FFFFFF" strokeWidth="2.5" />
-              <circle cx="480" cy="40" r="4.5" fill="#2563EB" stroke="#FFFFFF" strokeWidth="2.5" />
+                  {/* Curve 2 (Fuel Volume Litres) */}
+                  <path d={litPathD} fill="none" stroke="#8B5CF6" strokeWidth="2" strokeDasharray="4 4" strokeLinecap="round" />
+
+                  {/* Dynamic Points with dots */}
+                  {revCoords.map((pt, i) => (
+                    pt.amount > 0 ? (
+                      <circle key={i} cx={pt.x} cy={pt.y} r="4.5" fill="#2563EB" stroke="#FFFFFF" strokeWidth="2.5" />
+                    ) : null
+                  ))}
+                </>
+              ) : (
+                <>
+                  {/* Flat baseline when no sales */}
+                  <line x1="20" y1="185" x2="680" y2="185" stroke="#94A3B8" strokeWidth="2" strokeDasharray="4 4" />
+                </>
+              )}
             </svg>
+
+            {!hasHourlyData && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="text-xs font-semibold px-3 py-1.5 rounded-xl bg-slate-100/90 text-slate-500 border border-slate-200">
+                  {language === 'so' ? 'Wali wax iib ah lama samayn muddadan' : 'No sales recorded for this period yet'}
+                </span>
+              </div>
+            )}
 
             {/* X-Axis labels */}
             <div className="flex items-center justify-between text-[11px] text-slate-400 mt-2 px-1">
-              <span>08:00 AM</span>
-              <span>10:00 AM</span>
-              <span>12:00 PM</span>
-              <span>02:00 PM</span>
-              <span>04:00 PM</span>
-              <span>06:00 PM</span>
-              <span>08:00 PM</span>
+              {timeBuckets.map((b, i) => (
+                <span key={i}>{b.label}</span>
+              ))}
             </div>
           </div>
 
@@ -332,8 +381,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <span className="w-2.5 h-2.5 rounded-full bg-purple-500" />
               <span className="font-medium text-slate-700">Fuel Litres (L)</span>
             </div>
-            <div className="flex items-center gap-2 text-slate-400 ml-auto">
-              <span>Peak: 06:00 PM</span>
+            <div className="flex items-center gap-2 text-slate-500 font-semibold ml-auto">
+              <span>{hasHourlyData && peakPoint.amount > 0 ? `Peak: ${peakPoint.hour} ($${peakPoint.amount.toFixed(2)})` : (language === 'so' ? 'Wali iib ma jiro' : 'No sales yet')}</span>
             </div>
           </div>
         </div>
@@ -356,48 +405,73 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <div className="flex items-center justify-center py-4">
               <div className="relative w-36 h-36 flex items-center justify-center">
                 <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                  {/* PMS Ring */}
-                  <circle
-                    cx="50" cy="50" r="38"
-                    fill="none"
-                    stroke="#10B981"
-                    strokeWidth="11"
-                    strokeDasharray={`${pmsPct * 2.38} 238`}
-                    strokeDashoffset="0"
-                  />
-                  {/* AGO Ring */}
-                  <circle
-                    cx="50" cy="50" r="38"
-                    fill="none"
-                    stroke="#F59E0B"
-                    strokeWidth="11"
-                    strokeDasharray={`${agoPct * 2.38} 238`}
-                    strokeDashoffset={`-${pmsPct * 2.38}`}
-                  />
-                  {/* DPK Ring */}
-                  <circle
-                    cx="50" cy="50" r="38"
-                    fill="none"
-                    stroke="#3B82F6"
-                    strokeWidth="11"
-                    strokeDasharray={`${dpkPct * 2.38} 238`}
-                    strokeDashoffset={`-${(pmsPct + agoPct) * 2.38}`}
-                  />
-                  {/* LPG Ring */}
-                  <circle
-                    cx="50" cy="50" r="38"
-                    fill="none"
-                    stroke="#8B5CF6"
-                    strokeWidth="11"
-                    strokeDasharray={`${lpgPct * 2.38} 238`}
-                    strokeDashoffset={`-${(pmsPct + agoPct + dpkPct) * 2.38}`}
-                  />
+                  {totalFuelDistributed === 0 ? (
+                    <circle
+                      cx="50" cy="50" r="38"
+                      fill="none"
+                      stroke="#E2E8F0"
+                      strokeWidth="10"
+                    />
+                  ) : (
+                    <>
+                      {/* PMS Ring */}
+                      {pmsPct > 0 && (
+                        <circle
+                          cx="50" cy="50" r="38"
+                          fill="none"
+                          stroke="#10B981"
+                          strokeWidth="11"
+                          strokeDasharray={`${pmsPct * 2.38} 238`}
+                          strokeDashoffset="0"
+                        />
+                      )}
+                      {/* AGO Ring */}
+                      {agoPct > 0 && (
+                        <circle
+                          cx="50" cy="50" r="38"
+                          fill="none"
+                          stroke="#F59E0B"
+                          strokeWidth="11"
+                          strokeDasharray={`${agoPct * 2.38} 238`}
+                          strokeDashoffset={`-${pmsPct * 2.38}`}
+                        />
+                      )}
+                      {/* DPK Ring */}
+                      {dpkPct > 0 && (
+                        <circle
+                          cx="50" cy="50" r="38"
+                          fill="none"
+                          stroke="#3B82F6"
+                          strokeWidth="11"
+                          strokeDasharray={`${dpkPct * 2.38} 238`}
+                          strokeDashoffset={`-${(pmsPct + agoPct) * 2.38}`}
+                        />
+                      )}
+                      {/* LPG Ring */}
+                      {lpgPct > 0 && (
+                        <circle
+                          cx="50" cy="50" r="38"
+                          fill="none"
+                          stroke="#8B5CF6"
+                          strokeWidth="11"
+                          strokeDasharray={`${lpgPct * 2.38} 238`}
+                          strokeDashoffset={`-${(pmsPct + agoPct + dpkPct) * 2.38}`}
+                        />
+                      )}
+                    </>
+                  )}
                 </svg>
 
                 <div className="absolute flex flex-col items-center justify-center text-center">
-                  <span className="text-[10px] font-bold uppercase text-slate-400">Total</span>
-                  <span className="text-base font-extrabold text-slate-900">{totalTransactions}</span>
-                  <span className="text-[9px] text-slate-400">Pumps</span>
+                  <span className="text-[10px] font-bold uppercase text-slate-400">
+                    {totalFuelDistributed === 0 ? 'Total' : 'Total'}
+                  </span>
+                  <span className="text-base font-extrabold text-slate-900">
+                    {totalTransactions}
+                  </span>
+                  <span className="text-[9px] text-slate-400">
+                    {totalFuelDistributed === 0 ? 'Iib ma jiro' : 'Pumps'}
+                  </span>
                 </div>
               </div>
             </div>
@@ -558,56 +632,96 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
             {/* Tank Telemetry Rows */}
             <div className="space-y-3.5">
-              {tanks.map(tank => {
-                const pct = Math.round((tank.currentLevel / tank.capacity) * 100);
-                const fc  = FUEL_COLORS[tank.fuelType] || FUEL_COLORS.PMS;
-                const isLow = pct < 25;
-
-                return (
-                  <div
-                    key={tank.id}
-                    className="p-3 rounded-xl bg-[#F8F9FA] border border-[#ECEEF2] space-y-2 hover:border-slate-300 transition-colors"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div
-                          className="w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold"
-                          style={{ background: fc.bg, color: fc.text }}
-                        >
-                          <Flame className="w-3.5 h-3.5" />
-                        </div>
-                        <div>
-                          <div className="text-xs font-bold text-slate-900 leading-tight">
-                            {tank.name}
-                          </div>
-                          <div className="text-[10px] text-slate-400 font-medium">
-                            {tank.fuelType} · ${tank.unitPrice.toFixed(2)}/L
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="text-right">
-                        <span className={`text-xs font-bold ${isLow ? 'text-red-600' : 'text-slate-900'}`}>
-                          {pct}%
-                        </span>
-                        <span className="text-[10px] text-slate-400 ml-1">
-                          ({tank.currentLevel.toLocaleString()}L)
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="fuel-bar-track">
-                      <div
-                        className="fuel-bar-fill"
-                        style={{
-                          width: `${pct}%`,
-                          background: isLow ? '#EF4444' : fc.fill
-                        }}
-                      />
-                    </div>
+              {tanks.length === 0 ? (
+                <div className="p-6 rounded-2xl bg-[#F8F9FA] border border-[#ECEEF2] text-center space-y-3">
+                  <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto">
+                    <Fuel className="w-5 h-5" />
                   </div>
-                );
-              })}
+                  <div>
+                    <h3 className="text-xs font-bold text-slate-800">
+                      {language === 'so' ? 'Haamo shidaal wali lama diiwaangelin' : 'No tanks registered yet'}
+                    </h3>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      {language === 'so'
+                        ? 'Diiwaangeli haamahaaga oo gal shidaalka booyaddu keentay.'
+                        : 'Register your tanks and record bulk deliveries.'}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => onNavigate('tanks')}
+                    className="w-full py-2 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-colors cursor-pointer"
+                  >
+                    <span>{language === 'so' ? 'Diiwaangeli Haamo' : 'Setup Tanks'}</span>
+                  </button>
+                </div>
+              ) : (
+                tanks.map(tank => {
+                  const hasStock = (tank.currentLevel || 0) > 0;
+                  const capacity = tank.capacity || 10000;
+                  const pct = hasStock ? Math.min(100, Math.max(0, Math.round(((tank.currentLevel || 0) / capacity) * 100))) : 0;
+                  const fc  = FUEL_COLORS[tank.fuelType] || FUEL_COLORS.PMS;
+                  const isLow = pct < 25;
+
+                  return (
+                    <div
+                      key={tank.id}
+                      className="p-3 rounded-xl bg-[#F8F9FA] border border-[#ECEEF2] space-y-2 hover:border-slate-300 transition-colors"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-6 h-6 rounded-lg flex items-center justify-center text-xs font-bold"
+                            style={{ background: fc.bg, color: fc.text }}
+                          >
+                            <Flame className="w-3.5 h-3.5" />
+                          </div>
+                          <div>
+                            <div className="text-xs font-bold text-slate-900 leading-tight">
+                              {tank.name}
+                            </div>
+                            <div className="text-[10px] text-slate-400 font-medium">
+                              {tank.fuelType} · ${tank.unitPrice ? tank.unitPrice.toFixed(2) : '0.00'}/L
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="text-right">
+                          <span className={`text-xs font-bold ${!hasStock ? 'text-slate-400' : isLow ? 'text-red-600' : 'text-slate-900'}`}>
+                            {pct}%
+                          </span>
+                          <span className="text-[10px] text-slate-400 ml-1">
+                            ({(tank.currentLevel || 0).toLocaleString()}L)
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="fuel-bar-track">
+                        <div
+                          className="fuel-bar-fill"
+                          style={{
+                            width: `${pct}%`,
+                            background: !hasStock ? '#CBD5E1' : isLow ? '#EF4444' : fc.fill
+                          }}
+                        />
+                      </div>
+
+                      {!hasStock && (
+                        <div className="flex items-center justify-between pt-0.5 text-[10px]">
+                          <span className="text-amber-600 font-medium">
+                            {language === 'so' ? 'Haantu way madhan tahay' : 'Empty tank'}
+                          </span>
+                          <button
+                            onClick={() => onNavigate('tanks')}
+                            className="text-blue-600 hover:text-blue-700 font-bold cursor-pointer"
+                          >
+                            {language === 'so' ? 'Ku shub shidaal' : 'Log Delivery'}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              )}
             </div>
           </div>
 

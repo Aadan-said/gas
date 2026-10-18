@@ -1,6 +1,7 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Flame, Printer, Plus, X, QrCode } from 'lucide-react';
 import { Sale, StationConfig } from '@/lib/types';
 import { Language } from '@/lib/translations';
@@ -20,7 +21,13 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   onClose,
   onNewSale
 }) => {
-  if (!sale) return null;
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!sale || !mounted) return null;
 
   const handlePrint = () => window.print();
   const isVoided = sale.paymentStatus === 'voided';
@@ -35,13 +42,13 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
     card: language === 'so' ? 'Kaadh / Bank' : 'Card / Bank'
   };
 
-  return (
+  const modalNode = (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/50 backdrop-blur-xs overflow-y-auto"
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-slate-950/65 backdrop-blur-sm animate-in fade-in duration-200"
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
-        className="modal-content max-w-[340px] w-full max-h-[90vh] my-auto rounded-2xl relative flex flex-col overflow-hidden bg-white border border-[#ECEEF2] shadow-2xl transition-all"
+        className="modal-content max-w-[340px] w-full max-h-[90vh] my-auto rounded-3xl relative flex flex-col overflow-hidden bg-white border border-[#ECEEF2] shadow-2xl transition-all animate-in zoom-in-95 duration-200"
       >
         {/* Close Button */}
         <button
@@ -164,4 +171,6 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
       </div>
     </div>
   );
+
+  return createPortal(modalNode, document.body);
 };

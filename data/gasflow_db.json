@@ -169,7 +169,7 @@
       "pin": "****",
       "status": "active",
       "branch": "Main Branch",
-      "lastLogin": "2026-10-15T13:59:24.096Z",
+      "lastLogin": "2026-10-18T13:24:11.754Z",
       "twoFactorEnabled": false,
       "organizationId": "st_1791985142658_st6ke"
     },
@@ -186,6 +186,18 @@
       "branch": "Main Branch",
       "lastLogin": "Never",
       "twoFactorEnabled": false,
+      "organizationId": "st_1791985142658_st6ke"
+    },
+    {
+      "id": "usr_1792329198114_bjliy",
+      "name": "Maxmuud ali",
+      "username": "mohamuud",
+      "email": "mohamud@gmail.com",
+      "passwordHash": "$2b$12$CbSPNu07IlkxoqeVuENs8.A6glcufczarNlF1jW.kYVRLyjsCXDNS",
+      "pin": "12356",
+      "role": "accountant",
+      "status": "active",
+      "branch": "Main Branch",
       "organizationId": "st_1791985142658_st6ke"
     }
   ],
@@ -248,7 +260,7 @@
       "fuelType": "PMS",
       "name": "Baasiin (PMS)",
       "capacity": 10000,
-      "currentLevel": 4970,
+      "currentLevel": 4950,
       "unitPrice": 1.15,
       "minThreshold": 2000,
       "status": "normal",
@@ -487,6 +499,23 @@
       "createdAt": "2026-10-10T09:30:00.000Z",
       "syncStatus": "synced",
       "organizationId": "st_1791985142658_st6ke"
+    },
+    {
+      "id": "sal_1792247465445_e8esp",
+      "saleNumber": "INV-00006",
+      "stationId": "st_1791985142658_st6ke",
+      "deviceId": "DEV-UI7RJSLX",
+      "cashierId": "u_1791985142658_7l5zi",
+      "cashierName": "farhaan ali",
+      "fuelType": "PMS",
+      "tankId": "st_1791985142658_st6ke_t1",
+      "litres": 20,
+      "unitPrice": 1.15,
+      "totalAmount": 23,
+      "paymentMethod": "sahal",
+      "paymentStatus": "paid",
+      "createdAt": "2026-10-17T14:31:05.445Z",
+      "syncStatus": "synced"
     }
   ],
   "deliveries": [
@@ -571,6 +600,19 @@
       "note": "Dispensed to Walk-in",
       "createdAt": "2026-10-13T13:50:39.292Z",
       "organizationId": "st_001"
+    },
+    {
+      "id": "mov_1792247465445_s1ski",
+      "organizationId": "st_1791985142658_st6ke",
+      "tankId": "st_1791985142658_st6ke_t1",
+      "fuelType": "PMS",
+      "type": "sale",
+      "quantity": -20,
+      "previousLevel": 4970,
+      "newLevel": 4950,
+      "referenceId": "sal_1792247465445_e8esp",
+      "note": "Sale #INV-00006",
+      "createdAt": "2026-10-17T14:31:05.445Z"
     }
   ],
   "customers": [
@@ -889,6 +931,87 @@
       "details": "GasFlow Station Management Engine initialized with secure RBAC storage.",
       "createdAt": "2026-10-13T13:49:41.292Z",
       "organizationId": "st_001"
+    },
+    {
+      "id": "aud_1792246829716_9kw9u",
+      "organizationId": "st_1791985142658_st6ke",
+      "userId": "system",
+      "userName": "Admin",
+      "action": "USER_STATUS_CHANGE",
+      "details": "User Mohamed Ali set to inactive.",
+      "createdAt": "2026-10-17T14:20:29.716Z"
+    },
+    {
+      "id": "aud_1792246830537_9hujz",
+      "organizationId": "st_1791985142658_st6ke",
+      "userId": "system",
+      "userName": "Admin",
+      "action": "USER_STATUS_CHANGE",
+      "details": "User Mohamed Ali set to active.",
+      "createdAt": "2026-10-17T14:20:30.537Z"
+    },
+    {
+      "id": "aud_1792246833137_np57l",
+      "organizationId": "st_1791985142658_st6ke",
+      "userId": "system",
+      "userName": "Admin",
+      "action": "USER_STATUS_CHANGE",
+      "details": "User Mohamed Ali set to inactive.",
+      "createdAt": "2026-10-17T14:20:33.137Z"
+    },
+    {
+      "id": "aud_1792247465445_nkri2",
+      "organizationId": "st_1791985142658_st6ke",
+      "userId": "u_1791985142658_7l5zi",
+      "userName": "farhaan ali",
+      "action": "SALE_CREATED",
+      "details": "Sale INV-00006: 20L of PMS for $23.00.",
+      "createdAt": "2026-10-17T14:31:05.445Z"
+    },
+    {
+      "id": "aud_1792329198114_bcvnm",
+      "organizationId": "st_1791985142658_st6ke",
+      "userId": "system",
+      "userName": "Admin",
+      "action": "USER_CREATED",
+      "details": "Created user Maxmuud ali (accountant).",
+      "createdAt": "2026-10-18T13:13:18.115Z"
+    },
+    {
+      "id": "aud_1792329213933_2t8qe",
+      "organizationId": "st_1791985142658_st6ke",
+      "userId": "system",
+      "userName": "Admin",
+      "action": "USER_STATUS_CHANGE",
+      "details": "User Maxmuud ali set to inactive.",
+      "createdAt": "2026-10-18T13:13:33.934Z"
+    },
+    {
+      "id": "aud_1792329221424_ihmd9",
+      "organizationId": "st_1791985142658_st6ke",
+      "userId": "system",
+      "userName": "Admin",
+      "action": "USER_STATUS_CHANGE",
+      "details": "User Maxmuud ali set to active.",
+      "createdAt": "2026-10-18T13:13:41.424Z"
+    },
+    {
+      "id": "aud_1792329222010_xw7la",
+      "organizationId": "st_1791985142658_st6ke",
+      "userId": "system",
+      "userName": "Admin",
+      "action": "USER_STATUS_CHANGE",
+      "details": "User Mohamed Ali set to active.",
+      "createdAt": "2026-10-18T13:13:42.010Z"
+    },
+    {
+      "id": "aud_1792344345564_pm1kl",
+      "organizationId": "st_1791985142658_st6ke",
+      "userId": "system",
+      "userName": "Admin",
+      "action": "STATION_CONFIG_UPDATE",
+      "details": "Updated station settings.",
+      "createdAt": "2026-10-18T17:25:45.564Z"
     }
   ]
 }

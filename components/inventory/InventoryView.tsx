@@ -285,30 +285,53 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
           title={language === 'so' ? 'Diiwaangeli Hagaajin Shidaal' : 'Manual Stock Adjustment'}
           subtitle={
             language === 'so'
-              ? 'Wax ku dar ama ka jar haanta haddii uumi-bax ama farqi dipstick dhacay.'
+              ? 'Wax ku dar ama ka jar haanta haddii uumi-bax, farqi dipstick ama tijaabo dhacday.'
               : 'Add or deduct litres for calibration, temperature drift, or evaporation.'
           }
+          icon={<SlidersHorizontal className="w-5 h-5 text-blue-600" />}
+          maxWidth="md"
         >
           <form onSubmit={handleAdjustSubmit} className="space-y-4 text-xs">
             <div>
-              <label className="block font-bold text-slate-700 mb-1">
+              <label className="block font-bold text-slate-700 mb-1.5">
                 {language === 'so' ? 'Dooro Haanta' : 'Select Tank'}
               </label>
               <select
                 value={selectedTankId}
                 onChange={e => setSelectedTankId(e.target.value)}
-                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800"
+                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
               >
                 {tanks.map(tank => (
                   <option key={tank.id} value={tank.id}>
-                    {tank.name} ({tank.tankNumber}) — Hadda ku jirta: {tank.currentLevel} L
+                    {tank.name} ({tank.tankNumber}) — {language === 'so' ? 'Hadda ku jirta:' : 'Current:'} {tank.currentLevel.toLocaleString()} L
                   </option>
                 ))}
               </select>
             </div>
 
+            {/* Live calculation card */}
+            {(() => {
+              const currentTank = tanks.find(t => t.id === selectedTankId);
+              const qty = parseFloat(adjustLitres) || 0;
+              const newTotal = (currentTank?.currentLevel || 0) + qty;
+              return currentTank ? (
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/90 flex items-center justify-between">
+                  <div>
+                    <span className="text-[11px] text-slate-500 font-medium">{language === 'so' ? 'Heerka Hadda:' : 'Current Level:'}</span>
+                    <p className="font-bold text-slate-900">{currentTank.currentLevel.toLocaleString()} L</p>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[11px] text-slate-500 font-medium">{language === 'so' ? 'Heerka Hagaajinta Kadib:' : 'Projected Level:'}</span>
+                    <p className={`font-black text-sm ${qty < 0 ? 'text-amber-600' : qty > 0 ? 'text-emerald-600' : 'text-slate-700'}`}>
+                      {newTotal.toLocaleString()} L
+                    </p>
+                  </div>
+                </div>
+              ) : null;
+            })()}
+
             <div>
-              <label className="block font-bold text-slate-700 mb-1">
+              <label className="block font-bold text-slate-700 mb-1.5">
                 {language === 'so' ? 'Tirada Litir (+ kordhi, - ka jar)' : 'Quantity in Litres (+ or -)'}
               </label>
               <input
@@ -318,12 +341,31 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                 value={adjustLitres}
                 onChange={e => setAdjustLitres(e.target.value)}
                 placeholder="e.g. -25 ama +50"
-                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-black text-slate-900"
+                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-black text-slate-900 text-lg focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
               />
+
+              {/* Quick Adjustment Pills */}
+              <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                <span className="text-[11px] text-slate-400 font-semibold">{language === 'so' ? 'Degdeg:' : 'Quick:'}</span>
+                {[-50, -20, -10, 10, 20, 50].map(val => (
+                  <button
+                    key={val}
+                    type="button"
+                    onClick={() => setAdjustLitres(val.toString())}
+                    className={`px-2.5 py-1 rounded-lg font-bold text-[11px] transition-colors ${
+                      val < 0
+                        ? 'bg-rose-50 text-rose-700 hover:bg-rose-100'
+                        : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                    }`}
+                  >
+                    {val > 0 ? `+${val} L` : `${val} L`}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div>
-              <label className="block font-bold text-slate-700 mb-1">
+              <label className="block font-bold text-slate-700 mb-1.5">
                 {language === 'so' ? 'Sababta Hagaajinta' : 'Reason / Justification'}
               </label>
               <input
@@ -331,21 +373,42 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
                 required
                 value={adjustReason}
                 onChange={e => setAdjustReason(e.target.value)}
-                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800"
+                placeholder="e.g. Uumi-bax ama farqi cabbir"
+                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 text-xs focus:ring-2 focus:ring-blue-500/20 focus:outline-none mb-2"
               />
+
+              {/* Quick Reason Pills */}
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {[
+                  { label: language === 'so' ? 'Uumi-bax' : 'Evaporation', val: 'Uumi-bax maalinle ah (Evaporation)' },
+                  { label: language === 'so' ? 'Farqi Dipstick' : 'Dipstick Variance', val: 'Farqi dipstick iyo cabbirka birta' },
+                  { label: language === 'so' ? 'Tijaabo Bam' : 'Pump Calibration', val: 'Tijaabo bam (Pump test / Calibration)' },
+                  { label: language === 'so' ? 'Daadasho' : 'Spillage', val: 'Khasaaro / Daadasho (Spillage)' }
+                ].map(r => (
+                  <button
+                    key={r.label}
+                    type="button"
+                    onClick={() => setAdjustReason(r.val)}
+                    className="px-2 py-1 rounded-lg bg-slate-100 hover:bg-blue-50 hover:text-blue-600 text-slate-600 font-semibold text-[10px] transition-colors"
+                  >
+                    {r.label}
+                  </button>
+                ))}
+              </div>
             </div>
 
-            <div className="pt-2 flex justify-end gap-2">
+            <div className="pt-3 border-t border-slate-100 flex justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setAdjustModalOpen(false)}
-                className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 font-bold hover:bg-slate-50"
+                className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold hover:bg-slate-50 transition-colors"
               >
-                Cancel
+                {language === 'so' ? 'Ka noqo' : 'Cancel'}
               </button>
               <button
                 type="submit"
-                className="px-5 py-2 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 shadow-sm"
+                disabled={!adjustLitres || parseFloat(adjustLitres) === 0}
+                className="px-5 py-2.5 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 disabled:opacity-50 shadow-sm transition-colors"
               >
                 {language === 'so' ? 'Xaqiiji Hagaajinta' : 'Save Adjustment'}
               </button>

@@ -236,7 +236,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   return (
     <>
       {/* 1. Desktop Fixed Sidebar */}
-      <aside className="hidden lg:flex w-60 flex-shrink-0 flex-col h-screen sticky top-0 z-20 bg-white border-r border-[#ECEEF2]">
+      <aside className="hidden lg:flex w-60 flex-shrink-0 flex-col h-full bg-white border-r border-[#ECEEF2] overflow-hidden select-none">
         {renderNavContent(false)}
       </aside>
 

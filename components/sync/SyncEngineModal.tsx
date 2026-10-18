@@ -207,22 +207,24 @@ export const SyncEngineModal: React.FC<SyncEngineModalProps> = ({
       </div>
 
       {/* Outbox Queue Table */}
-      <div className="bg-white p-6 rounded-2xl border border-[#ECEEF2] shadow-sm space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-base font-bold text-slate-900">
-              IndexedDB Local Outbox & Sync Ledger ({syncEvents.length} Events)
+      <div className="bg-white p-4 sm:p-6 rounded-2xl border border-[#ECEEF2] shadow-sm space-y-4">
+        <div className="flex flex-wrap items-start sm:items-center justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <h2 className="text-sm sm:text-base font-bold text-slate-900 leading-snug">
+              IndexedDB Local Outbox &amp; Sync Ledger ({syncEvents.length} Events)
             </h2>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-slate-400 mt-0.5">
               Immutable UUID events, schema versioning, retry counts and conflict resolution.
             </p>
           </div>
-          <div className="flex gap-2">
-            <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 font-bold text-xs rounded-lg">
-              {syncedEvents.length} Synced
+          <div className="sync-badge-row shrink-0 flex items-center gap-2">
+            <span className="sync-badge whitespace-nowrap px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg font-bold text-xs inline-flex items-center gap-1.5 shadow-2xs">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block shrink-0" />
+              <span>{syncedEvents.length} {language === 'so' ? 'Isku-xiray' : 'Synced'}</span>
             </span>
-            <span className="px-2.5 py-1 bg-amber-50 text-amber-700 font-bold text-xs rounded-lg">
-              {pendingEvents.length} Pending
+            <span className="sync-badge whitespace-nowrap px-2.5 py-1 bg-amber-50 text-amber-700 border border-amber-200 rounded-lg font-bold text-xs inline-flex items-center gap-1.5 shadow-2xs">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block shrink-0" />
+              <span>{pendingEvents.length} {language === 'so' ? 'Sugaya' : 'Pending'}</span>
             </span>
           </div>
         </div>
