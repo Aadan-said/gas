@@ -25,10 +25,14 @@ import {
   Receipt,
   AlertTriangle,
   DollarSign,
-  Package
+  Package,
+  Truck,
+  Terminal,
+  AlertOctagon
 } from 'lucide-react';
-import { User, NetworkMode, UserRole, Sale, Tank, Customer, Expense } from '@/lib/types';
+import { User, NetworkMode, UserRole, Sale, Tank, Customer, Expense, FuelDelivery, AuditLog } from '@/lib/types';
 import { translations, Language } from '@/lib/translations';
+import { GasFlowLogo } from '@/components/ui';
 
 interface HeaderProps {
   currentUser: User;
@@ -44,11 +48,15 @@ interface HeaderProps {
   onOpenAuthPortal?: () => void;
   onOpenProfileModal?: () => void;
   onLogout?: () => void;
-  // Real system data for notifications
+  onOpenDeveloperControl?: () => void;
+  // Real live system data for notifications
   sales?: Sale[];
   tanks?: Tank[];
   customers?: Customer[];
   expenses?: Expense[];
+  deliveries?: FuelDelivery[];
+  auditLogs?: AuditLog[];
+  developerGraceWarning?: string | null;
 }
 
 interface NotificationItem {
@@ -120,7 +128,7 @@ function timeAgo(isoDate: string, language: Language): string {
 // Icon component map
 function getNotifIcon(iconName: string) {
   const icons: Record<string, React.ComponentType<{ className?: string; style?: React.CSSProperties }>> = {
-    Fuel, CreditCard, TrendingDown, CheckCircle2, ShieldAlert, DollarSign, Receipt, Package, AlertTriangle
+    Fuel, CreditCard, TrendingDown, CheckCircle2, ShieldAlert, DollarSign, Receipt, Package, AlertTriangle, Truck, Terminal, AlertOctagon
   };
   return icons[iconName] || Fuel;
 }
@@ -139,10 +147,14 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenAuthPortal,
   onOpenProfileModal,
   onLogout,
+  onOpenDeveloperControl,
   sales = [],
   tanks = [],
   customers = [],
-  expenses = []
+  expenses = [],
+  deliveries = [],
+  auditLogs = [],
+  developerGraceWarning = null
 }) => {
   const t = translations[language];
   const [currentDate, setCurrentDate] = useState('');
@@ -174,15 +186,92 @@ export const Header: React.FC<HeaderProps> = ({
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  // ── Build dynamic notifications from real data ──────────────────────────
+  // ── Build 100% dynamic notifications from real live system data ──────────
   const notifications = useMemo<NotificationItem[]>(() => {
     const items: NotificationItem[] = [];
 
-    // 1. Recent sales (last 5 paid)
+    // 0. Developer / Subscription Notice if issued
+    if (developerGraceWarning) {
+      items.push({
+        id: 'dev_warning',
+        category: 'finance',
+        iconName: 'AlertOctagon',
+        iconColor: '#DC2626',
+        iconBg: '#FEF2F2',
+        title: language === 'so' ? 'Ogeysiis Muhiim ah: Liisanka Softweerka' : 'Important: Software License Notice',
+        message: developerGraceWarning,
+        time: language === 'so' ? 'Hadda' : 'Now',
+        roles: ['admin', 'manager', 'accountant'],
+        unread: true,
+        timestamp: Date.now()
+      });
+    }
+
+    // 1. Live Tank Telemetry: Critical & Low Alerts
+    tanks.forEach(t => {
+      const pct = Math.round((t.currentLevel / t.capacity) * 100);
+      const isCritical = t.currentLevel <= t.minThreshold * 0.5;
+      const isLow = t.currentLevel <= t.minThreshold;
+
+      if (isCritical) {
+        items.push({
+          id: `tank_crit_${t.id}`,
+          category: 'fuel',
+          iconName: 'AlertTriangle',
+          iconColor: '#DC2626',
+          iconBg: '#FEE2E2',
+          title: language === 'so' ? 'HEER HALIS AH: Shidaal Baa Dhamaanaya!' : 'CRITICAL: Tank Fuel Depletion!',
+          message: language === 'so'
+            ? `Haanta ${t.name} (${t.tankNumber}) waxay joogtaa ${pct}% kaliya! (${t.currentLevel.toLocaleString()}L baa haray. Dalbo booyad degdeg ah).`
+            : `Tank ${t.name} (${t.tankNumber}) is down to ${pct}%! Only ${t.currentLevel.toLocaleString()}L remaining. Reorder urgently.`,
+          time: language === 'so' ? 'Hadda' : 'Now',
+          roles: ['admin', 'manager', 'cashier'],
+          unread: true,
+          timestamp: Date.now() - 60000
+        });
+      } else if (isLow) {
+        items.push({
+          id: `tank_low_${t.id}`,
+          category: 'fuel',
+          iconName: 'TrendingDown',
+          iconColor: '#EA580C',
+          iconBg: '#FFEDD5',
+          title: language === 'so' ? 'Digniin: Heerka Haanta Waa Hooseeyaa' : 'Warning: Low Fuel Level',
+          message: language === 'so'
+            ? `${t.name} (${t.tankNumber}) waxay maraysaa ${pct}% — kaydka waxaa ku jira ${t.currentLevel.toLocaleString()} L.`
+            : `${t.name} (${t.tankNumber}) level is at ${pct}% — remaining ${t.currentLevel.toLocaleString()} L.`,
+          time: language === 'so' ? 'Maanta' : 'Today',
+          roles: ['admin', 'manager'],
+          unread: true,
+          timestamp: Date.now() - 300000
+        });
+      }
+    });
+
+    // 2. Real Deliveries (Fuel Shipments Received)
+    deliveries.slice(0, 4).forEach((del, i) => {
+      items.push({
+        id: `del_${del.id}`,
+        category: 'fuel',
+        iconName: 'Truck',
+        iconColor: '#2563EB',
+        iconBg: '#EFF6FF',
+        title: language === 'so' ? 'Shidaal Booyad Ayaa Soo Gaaray' : 'Fuel Delivery Received',
+        message: language === 'so'
+          ? `${del.fuelType}: ${del.litres.toLocaleString()}L oo shidaal ah ayaa lagu shubay haanta. Qeybiyaha: ${del.supplier || 'Bulaaco Petroleum'} ($${del.totalCost.toFixed(2)})`
+          : `${del.fuelType}: ${del.litres.toLocaleString()}L received from ${del.supplier || 'Supplier'} ($${del.totalCost.toFixed(2)})`,
+        time: timeAgo(del.receivedAt, language),
+        roles: ['admin', 'manager', 'accountant'],
+        unread: i === 0,
+        timestamp: new Date(del.receivedAt).getTime()
+      });
+    });
+
+    // 3. Real Sales Transactions (Latest paid sales)
     const recentSales = [...sales]
       .filter(s => s.paymentStatus === 'paid')
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-      .slice(0, 3);
+      .slice(0, 5);
 
     recentSales.forEach((s, i) => {
       items.push({
@@ -191,61 +280,48 @@ export const Header: React.FC<HeaderProps> = ({
         iconName: 'Fuel',
         iconColor: '#10B981',
         iconBg: '#ECFDF5',
-        title: language === 'so' ? 'Iib Cusub La Dhammaystay' : 'New Sale Completed',
+        title: language === 'so' ? 'Iib Cusub La Dhammaystay' : 'Sale Completed',
         message: language === 'so'
-          ? `Rasiidh ${s.saleNumber} (${s.fuelType} ${s.litres.toFixed(1)}L — $${s.totalAmount.toFixed(2)}) waa la dhammaystay`
-          : `Sale ${s.saleNumber} (${s.fuelType} ${s.litres.toFixed(1)}L — $${s.totalAmount.toFixed(2)}) completed`,
+          ? `Rasiidh ${s.saleNumber} (${s.fuelType} ${s.litres.toFixed(1)}L — $${s.totalAmount.toFixed(2)}) habka: ${s.paymentMethod.toUpperCase()} (Shuboole: ${s.cashierName || 'POS'})`
+          : `Receipt ${s.saleNumber} (${s.fuelType} ${s.litres.toFixed(1)}L — $${s.totalAmount.toFixed(2)}) via ${s.paymentMethod.toUpperCase()}`,
         time: timeAgo(s.createdAt, language),
         roles: ['admin', 'manager', 'accountant', 'cashier'],
-        unread: i < 1,
+        unread: i === 0,
         timestamp: new Date(s.createdAt).getTime()
       });
     });
 
-    // 2. Low tank alerts
-    tanks.filter(t => t.currentLevel <= t.minThreshold).forEach(t => {
-      const pct = Math.round((t.currentLevel / t.capacity) * 100);
-      items.push({
-        id: `tank_low_${t.id}`,
-        category: 'fuel',
-        iconName: 'TrendingDown',
-        iconColor: '#EF4444',
-        iconBg: '#FEF2F2',
-        title: language === 'so' ? 'Heerka Haanta Hoose!' : 'Low Tank Level Alert!',
-        message: language === 'so'
-          ? `${t.name} (${t.tankNumber}) heerkeeda waxay gaadhay ${pct}% — ${t.currentLevel.toLocaleString()}L kaliya baa haray`
-          : `${t.name} (${t.tankNumber}) is at ${pct}% capacity — only ${t.currentLevel.toLocaleString()}L remaining`,
-        time: language === 'so' ? 'Hadda' : 'Now',
-        roles: ['admin', 'manager'],
-        unread: true,
-        timestamp: Date.now()
-      });
-    });
+    // 4. Customer Debts & Credit Thresholds
+    const debtors = customers
+      .filter(c => c.currentBalance > 0)
+      .sort((a, b) => b.currentBalance - a.currentBalance)
+      .slice(0, 3);
 
-    // 3. Customers with outstanding debt
-    const debtors = customers.filter(c => c.currentBalance > 0).slice(0, 3);
     debtors.forEach(c => {
+      const isHighDebt = c.creditLimit > 0 && c.currentBalance >= c.creditLimit * 0.8;
       items.push({
         id: `debt_${c.id}`,
         category: 'finance',
         iconName: 'CreditCard',
-        iconColor: '#D97706',
-        iconBg: '#FFFBEB',
-        title: language === 'so' ? 'Macaamiil Dayn Haysta' : 'Outstanding Customer Debt',
+        iconColor: isHighDebt ? '#DC2626' : '#D97706',
+        iconBg: isHighDebt ? '#FEF2F2' : '#FFFBEB',
+        title: isHighDebt
+          ? (language === 'so' ? 'Digniin: Xadka Deynta Waa La Gaaray!' : 'Credit Limit Threshold Reached!')
+          : (language === 'so' ? 'Macaamiil Dayn Ku Leeyahay' : 'Outstanding Customer Balance'),
         message: language === 'so'
-          ? `${c.name} waxay hayaan dayn $${c.currentBalance.toFixed(2)} ah — xadka $${c.creditLimit.toFixed(0)}`
-          : `${c.name} has $${c.currentBalance.toFixed(2)} outstanding — limit $${c.creditLimit.toFixed(0)}`,
+          ? `${c.name} (${c.phone}): waxay leeyihiin dayn furan oo ah $${c.currentBalance.toFixed(2)} (Xadka deynta: $${c.creditLimit.toFixed(0)})`
+          : `${c.name} (${c.phone}): outstanding balance $${c.currentBalance.toFixed(2)} (Limit: $${c.creditLimit.toFixed(0)})`,
         time: timeAgo(c.createdAt, language),
         roles: ['admin', 'manager', 'accountant'],
-        unread: c.currentBalance > 100,
+        unread: isHighDebt,
         timestamp: new Date(c.createdAt).getTime()
       });
     });
 
-    // 4. Recent expenses
+    // 5. Real Expenses Outflows
     const recentExpenses = [...expenses]
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-      .slice(0, 2);
+      .slice(0, 3);
 
     recentExpenses.forEach(ex => {
       items.push({
@@ -254,9 +330,9 @@ export const Header: React.FC<HeaderProps> = ({
         iconName: 'Receipt',
         iconColor: '#7C3AED',
         iconBg: '#F5F3FF',
-        title: language === 'so' ? 'Kharash La Diwaan Geliyay' : 'Expense Recorded',
+        title: language === 'so' ? 'Kharash Cusub La Diiwaangeliyay' : 'Expense Recorded',
         message: language === 'so'
-          ? `${ex.category}: ${ex.description} — $${ex.amount.toFixed(2)} (${ex.addedBy})`
+          ? `${ex.category}: ${ex.description} — $${ex.amount.toFixed(2)} (Waxaa bixiyay: ${ex.addedBy})`
           : `${ex.category}: ${ex.description} — $${ex.amount.toFixed(2)} by ${ex.addedBy}`,
         time: timeAgo(ex.createdAt, language),
         roles: ['admin', 'manager', 'accountant'],
@@ -265,22 +341,20 @@ export const Header: React.FC<HeaderProps> = ({
       });
     });
 
-    // 5. Tanks with recent delivery
-    tanks.filter(t => t.currentLevel > t.capacity * 0.7).slice(0, 1).forEach(t => {
+    // 6. Real Audit Trail & Security Events
+    auditLogs.slice(0, 3).forEach(log => {
       items.push({
-        id: `tank_full_${t.id}`,
-        category: 'fuel',
-        iconName: 'Package',
-        iconColor: '#2563EB',
-        iconBg: '#EFF6FF',
-        title: language === 'so' ? 'Haan Buux — Kayd Wanaagsan' : 'Tank Well Stocked',
-        message: language === 'so'
-          ? `${t.name} waxay u buuxtahay ${Math.round((t.currentLevel / t.capacity) * 100)}% — ${t.currentLevel.toLocaleString()}L / ${t.capacity.toLocaleString()}L`
-          : `${t.name} is ${Math.round((t.currentLevel / t.capacity) * 100)}% full — ${t.currentLevel.toLocaleString()}L / ${t.capacity.toLocaleString()}L`,
-        time: language === 'so' ? 'Maanta' : 'Today',
-        roles: ['admin', 'manager'],
+        id: `audit_${log.id}`,
+        category: 'all',
+        iconName: 'ShieldAlert',
+        iconColor: '#475569',
+        iconBg: '#F1F5F9',
+        title: language === 'so' ? 'Xeerka Amniga & Dhaqdhaqaaqa' : 'Audit Trail Event',
+        message: `${log.userName}: ${log.action} — ${log.details}`,
+        time: timeAgo(log.createdAt, language),
+        roles: ['admin'],
         unread: false,
-        timestamp: Date.now() - 3600000
+        timestamp: new Date(log.createdAt).getTime()
       });
     });
 
@@ -289,7 +363,7 @@ export const Header: React.FC<HeaderProps> = ({
       if (a.unread !== b.unread) return a.unread ? -1 : 1;
       return b.timestamp - a.timestamp;
     });
-  }, [sales, tanks, customers, expenses, language]);
+  }, [sales, tanks, customers, expenses, deliveries, auditLogs, developerGraceWarning, language]);
 
   const networkConfig = {
     cloud_online: { color: '#10B981', label: 'Cloud Online', Icon: Wifi,    bg: '#ECFDF5', border: '#D1FAE5' },
@@ -318,7 +392,8 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <header className="h-[62px] px-2.5 sm:px-6 flex items-center justify-between sticky top-0 z-30 shrink-0 bg-white/95 backdrop-blur-md border-b border-[#ECEEF2] w-full max-w-full">
+    <>
+      <header className="h-[62px] px-2.5 sm:px-6 flex items-center justify-between sticky top-0 z-30 shrink-0 bg-white/95 backdrop-blur-md border-b border-[#ECEEF2] w-full max-w-full">
       {/* Left side */}
       <div className="flex items-center gap-1.5 sm:gap-3 min-w-0 flex-1 max-w-sm sm:max-w-md md:max-w-xl">
         {/* Mobile Hamburger */}
@@ -331,13 +406,8 @@ export const Header: React.FC<HeaderProps> = ({
         </button>
 
         {/* Mobile Brand */}
-        <div className="flex items-center gap-1.5 lg:hidden shrink-0">
-          <div className="w-7 h-7 rounded-lg bg-[#111318] flex items-center justify-center shrink-0">
-            <Flame className="w-4 h-4 text-white fill-white" />
-          </div>
-          <span className="font-bold text-[13px] tracking-tight text-slate-900 hidden sm:inline">
-            GasFlow
-          </span>
+        <div className="lg:hidden shrink-0">
+          <GasFlowLogo size="xs" variant="compact" />
         </div>
 
         {/* Search Bar */}
@@ -680,6 +750,20 @@ export const Header: React.FC<HeaderProps> = ({
                 </button>
               )}
 
+              {(currentUser.role === 'admin') && onOpenDeveloperControl && (
+                <button
+                  type="button"
+                  onClick={() => { setUserDropdownOpen(false); onOpenDeveloperControl(); }}
+                  className="w-full text-left px-3 py-2 rounded-xl flex items-center justify-between text-[12px] font-bold text-slate-800 hover:bg-slate-100 transition-colors mb-1 border border-slate-200/80 cursor-pointer"
+                >
+                  <div className="flex items-center gap-2">
+                    <Terminal className="w-4 h-4 text-emerald-600" />
+                    <span>{language === 'so' ? 'Awoodda Engineer-ka (Master Dev)' : 'Developer Master Control'}</span>
+                  </div>
+                  <span className="text-[10px] text-emerald-800 bg-emerald-100/70 px-2 py-0.5 rounded-md font-bold">Lock/Unlock</span>
+                </button>
+              )}
+
               {onLogout && (
                 <div className="mt-1 pt-1 border-t border-slate-100">
                   <button
@@ -697,5 +781,15 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
     </header>
+    {developerGraceWarning && (
+      <div className="w-full bg-amber-500 text-white px-4 py-1.5 flex items-center justify-between text-xs font-bold shadow-xs shrink-0 z-20">
+        <div className="flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4 text-amber-100 shrink-0" />
+          <span>{developerGraceWarning}</span>
+        </div>
+        <span className="text-[10px] uppercase tracking-wider bg-white/20 px-2 py-0.5 rounded">Notice</span>
+      </div>
+    )}
+    </>
   );
 };

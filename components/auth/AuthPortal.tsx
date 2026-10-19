@@ -30,6 +30,7 @@ import { User, UserRole } from '@/lib/types';
 import { Language } from '@/lib/translations';
 import { apiLogin, apiRegister, apiGetSetupStatus, apiSetupAdmin } from '@/lib/api';
 import { getDeviceId } from '@/lib/storage';
+import { GasFlowLogo } from '@/components/ui';
 
 interface AuthPortalProps {
   users: User[];
@@ -42,6 +43,57 @@ interface AuthPortalProps {
   initialMode?: 'login' | 'register' | 'forgot' | '2fa';
 }
 
+const QUICK_ROLES = [
+  {
+    role: 'cashier',
+    titleSo: 'Shuboole',
+    titleEn: 'Cashier (POS)',
+    icon: Fuel,
+    descSo: 'Iibka Shidaalka, daabacaadda rasiidhyada & xisaab-xidhka shiftka maalinlaha ah.',
+    descEn: 'Fuel pump sales, customer receipts & daily shift register.',
+    accessSo: '✓ Awoodda: Iibka POS, lacag-qabashada EVC/Sahal/Kaash, Rasiidhada.',
+    accessEn: '✓ Scope: POS Dispenser, Cash & Mobile Payments, Receipts.',
+    defaultUser: 'fartuun',
+    defaultPin: '1234'
+  },
+  {
+    role: 'accountant',
+    titleSo: 'Xisaabiye',
+    titleEn: 'Accountant',
+    icon: Wallet,
+    descSo: 'Dafatirka buugaagta, maamulka deymaha macaamiisha, kharashaadka & faa\'iidada.',
+    descEn: 'Station accounting ledger, customer debts, operational expenses & reports.',
+    accessSo: '✓ Awoodda: Maaliyadda, Kharashaadka, Deymaha Macaamiisha, Warbixinnada.',
+    accessEn: '✓ Scope: Finance, Outflow Expenses, Debts Ledger, Financial Analytics.',
+    defaultUser: 'accountant',
+    defaultPin: '1234'
+  },
+  {
+    role: 'manager',
+    titleSo: 'Maareeye',
+    titleEn: 'Manager',
+    icon: Database,
+    descSo: 'Kormeerka mugga haamaha, qaabilaadda booyadaha cusub & cabbirka birta (dipstick).',
+    descEn: 'Tank volume telemetry, fuel deliveries & dipstick calibrations.',
+    accessSo: '✓ Awoodda: Haamaha, Keenista Shidaalka, Hagaajinta Kaydka, Kormeerka Shaqaalaha.',
+    accessEn: '✓ Scope: Tanks, Bulk Deliveries, Dipstick Reconciliation, Staff Audits.',
+    defaultUser: 'manager',
+    defaultPin: '1234'
+  },
+  {
+    role: 'admin',
+    titleSo: 'Maamule',
+    titleEn: 'Admin',
+    icon: ShieldCheck,
+    descSo: 'Awoodda buuxda ee nidaamka, ku darista shaqaalaha, dejinta qiimaha & kormeerka guud.',
+    descEn: 'Complete administrative authority, user provisioning & station settings.',
+    accessSo: '✓ Awoodda Buuxda: Dhammaan qaybaha nidaamka, Shaqaalaha & Settings.',
+    accessEn: '✓ Scope: Complete Station Governance, RBAC Security, Settings.',
+    defaultUser: 'aadan',
+    defaultPin: '1234'
+  }
+];
+
 export const AuthPortal: React.FC<AuthPortalProps> = ({
   users,
   onLogin,
@@ -53,10 +105,11 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
   initialMode = 'login'
 }) => {
   const [mode, setMode] = useState<'login' | 'register' | 'forgot' | '2fa'>(initialMode);
+  const [selectedRolePreset, setSelectedRolePreset] = useState<string>('cashier');
 
   // 1. Login State
-  const [loginIdentifier, setLoginIdentifier] = useState('');
-  const [loginPassword, setLoginPassword] = useState('');
+  const [loginIdentifier, setLoginIdentifier] = useState('fartuun');
+  const [loginPassword, setLoginPassword] = useState('1234');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [loginError, setLoginError] = useState('');
@@ -107,6 +160,13 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
     });
     return () => { active = false; };
   }, []);
+
+  // Reset scroll to top on every mode change (e.g. clicking Isdiiwaangeli)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    }
+  }, [mode]);
 
   // Auto-focus first digit in 2FA mode
   useEffect(() => {
@@ -164,16 +224,26 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
     }
   };
 
-  // Handle Direct Admin Registration
+  // Handle Direct Registration with real email validation
   const handleRegisterAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
     setRegError('');
 
-    if (!regFullName.trim() || !regUsername.trim() || !regEmail.trim() || !regPassword.trim()) {
+    if (!regUsername.trim() || !regEmail.trim() || !regPassword.trim()) {
       setRegError(
         language === 'so'
-          ? 'Fadlan buuxi dhammaan meelaha loo baahan yahay (*).'
-          : 'Please fill in all required fields (*).'
+          ? 'Fadlan buuxi dhammaan meelaha loo baahan yahay (Username, Email, iyo Password/PIN).'
+          : 'Please fill in all required fields (Username, Email, and Password/PIN).'
+      );
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(regEmail.trim())) {
+      setRegError(
+        language === 'so'
+          ? 'Fadlan geli cinwaan email sax ah (tusaale: aadan@gasflow.so ama magac@domain.com).'
+          : 'Please enter a valid email address (e.g. user@gasflow.so).'
       );
       return;
     }
@@ -181,23 +251,24 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
     if (regPassword.length < 4) {
       setRegError(
         language === 'so'
-          ? 'Password-ku waa inuu ugu yaraan ka koobnaadaa 4 xaraf ama tiro.'
+          ? 'Password/PIN-ku waa inuu ugu yaraan ka koobnaadaa 4 xaraf ama tiro.'
           : 'Password must be at least 4 characters.'
       );
       return;
     }
 
     setIsSubmitting(true);
+    const derivedName = regUsername.trim().charAt(0).toUpperCase() + regUsername.trim().slice(1);
 
     try {
       const { data, error } = await apiRegister({
-        name: regFullName.trim(),
+        name: derivedName,
         username: regUsername.trim().toLowerCase(),
         email: regEmail.trim().toLowerCase(),
         password: regPassword.trim(),
         pin: regPassword.trim(),
         role: 'admin',
-        stationName: regStationName.trim() || `${regFullName.trim()} Station`,
+        stationName: regStationName.trim() || `${derivedName} Station`,
         branch: regBranch.trim() || 'Main Branch'
       });
 
@@ -356,20 +427,7 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
     <div className="min-h-screen bg-[#F0F2F5] flex flex-col font-sans select-none antialiased">
       {/* Top Navbar */}
       <div className="w-full h-14 bg-white/95 backdrop-blur-md border-b border-slate-200/90 px-4 sm:px-8 flex items-center justify-between sticky top-0 z-30 shrink-0">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-sm shadow-emerald-500/20">
-            <Flame className="w-4.5 h-4.5 fill-white" />
-          </div>
-          <div>
-            <h1 className="text-sm font-black text-slate-900 leading-none tracking-tight flex items-center gap-1.5">
-              <span>GasFlow</span>
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 uppercase tracking-widest">
-                ERP Station
-              </span>
-            </h1>
-            <p className="text-[10px] text-slate-400 font-medium">Petroleum Station Management System</p>
-          </div>
-        </div>
+        <GasFlowLogo size="sm" variant="full" />
 
         {/* Right Controls */}
         <div className="flex items-center gap-2.5">
@@ -421,17 +479,7 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
 
               {/* Top Branding */}
               <div className="relative z-10">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-10 h-10 rounded-2xl bg-emerald-500 flex items-center justify-center shadow-lg shadow-emerald-500/30">
-                    <Flame className="w-6 h-6 fill-white text-white" />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-black tracking-tight leading-none text-white">GasFlow</h2>
-                    <p className="text-[11px] font-medium text-emerald-200/80 mt-0.5">
-                      Petroleum Station Management System
-                    </p>
-                  </div>
-                </div>
+                <GasFlowLogo size="lg" variant="compact" theme="dark" />
 
                 <div className="mt-8 space-y-2">
                   <h3 className="text-2xl sm:text-3xl font-black text-white tracking-tight leading-tight">
@@ -508,6 +556,70 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
                     <span>{loginError}</span>
                   </div>
                 )}
+
+                {/* Role Switcher & Direct Scope Preview */}
+                <div className="mb-4">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">
+                      {language === 'so' ? 'Dooro Kaalintaada (Role-Based Login)' : 'Select Your Role'}
+                    </span>
+                    <span className="text-[10px] text-emerald-800 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                      RBAC Terminal
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 mb-2.5">
+                    {QUICK_ROLES.map(qr => {
+                      const isSelected = selectedRolePreset === qr.role;
+                      const Icon = qr.icon;
+                      return (
+                        <button
+                          key={qr.role}
+                          type="button"
+                          onClick={() => {
+                            setSelectedRolePreset(qr.role);
+                            setLoginIdentifier(qr.defaultUser);
+                            setLoginPassword(qr.defaultPin);
+                            setLoginError('');
+                          }}
+                          className={`p-2 rounded-xl border text-center flex flex-col items-center gap-1 transition-all cursor-pointer select-none ${
+                            isSelected
+                              ? 'bg-slate-900 border-slate-900 text-white shadow-sm ring-2 ring-slate-900/10'
+                              : 'bg-slate-50/80 border-slate-200 text-slate-700 hover:bg-slate-100 hover:border-slate-300'
+                          }`}
+                        >
+                          <Icon className={`w-4 h-4 ${isSelected ? 'text-white' : 'text-slate-500'}`} />
+                          <span className="text-[11px] font-bold truncate w-full">
+                            {language === 'so' ? qr.titleSo : qr.titleEn}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Active Role Permissions & Scope Detail Card */}
+                  {(() => {
+                    const activeQr = QUICK_ROLES.find(r => r.role === selectedRolePreset) || QUICK_ROLES[0];
+                    return (
+                      <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/90 text-left space-y-1 text-[11px]">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-slate-900">
+                            {language === 'so' ? `Kaalinta: ${activeQr.titleSo}` : `Role: ${activeQr.titleEn}`}
+                          </span>
+                          <span className="text-[10px] text-emerald-700 font-semibold bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                            {language === 'so' ? `Akoon: ${activeQr.defaultUser}` : `Demo: ${activeQr.defaultUser}`}
+                          </span>
+                        </div>
+                        <p className="text-slate-600 leading-snug">
+                          {language === 'so' ? activeQr.descSo : activeQr.descEn}
+                        </p>
+                        <p className="text-emerald-700 font-semibold text-[10px]">
+                          {language === 'so' ? activeQr.accessSo : activeQr.accessEn}
+                        </p>
+                      </div>
+                    );
+                  })()}
+                </div>
 
                 {/* Form */}
                 <form onSubmit={handleLoginSubmit} className="space-y-4">
@@ -626,15 +738,7 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
               <div>
                 {/* Header */}
                 <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-xl bg-emerald-600 flex items-center justify-center text-white">
-                      <Flame className="w-4.5 h-4.5 fill-white" />
-                    </div>
-                    <div>
-                      <h2 className="text-sm font-black text-slate-900 leading-none">GasFlow</h2>
-                      <p className="text-[10px] text-slate-400">Petroleum Station System</p>
-                    </div>
-                  </div>
+                  <GasFlowLogo size="sm" variant="compact" />
 
                   <button
                     onClick={() => { setMode('login'); setLoginError(''); }}
@@ -682,22 +786,8 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
                   </div>
                 )}
 
-                {/* Single Step Direct Form */}
+                {/* Single Step Direct Form (Username, Email, Password/PIN) */}
                 <form onSubmit={handleRegisterAdmin} className="space-y-3.5">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">
-                      {language === 'so' ? 'Magacaaga Buuxa *' : 'Full Name *'}
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={regFullName}
-                      onChange={e => setRegFullName(e.target.value)}
-                      placeholder="e.g. Aadan Said"
-                      className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-50/60 focus:bg-white focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20 text-xs sm:text-sm text-slate-900 font-medium"
-                    />
-                  </div>
-
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-bold text-slate-700 mb-1">
@@ -817,13 +907,7 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
         {mode === 'forgot' && (
           <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-200/90 p-7 sm:p-9 transition-all">
             <div className="flex items-center gap-2.5 mb-6">
-              <div className="w-9 h-9 rounded-xl bg-emerald-600 flex items-center justify-center text-white shadow-md shadow-emerald-600/20">
-                <Flame className="w-5 h-5 fill-white" />
-              </div>
-              <div>
-                <h3 className="text-base font-black text-slate-900 leading-tight">GasFlow</h3>
-                <p className="text-[10px] text-slate-400">Petroleum Station System</p>
-              </div>
+              <GasFlowLogo size="md" variant="compact" />
             </div>
 
             {forgotError && (

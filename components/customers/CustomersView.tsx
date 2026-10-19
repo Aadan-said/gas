@@ -22,6 +22,7 @@ import {
 import { Customer, CustomerPayment, PaymentMethod, User, Sale } from '@/lib/types';
 import { translations, Language } from '@/lib/translations';
 import { Modal } from '@/components/ui/Modal';
+import { CustomSelect } from '@/components/ui/CustomSelect';
 
 interface CustomersViewProps {
   customers: Customer[];
@@ -525,17 +526,18 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
             <label className="block font-bold text-slate-700 mb-1.5">
               {language === 'so' ? 'Habka Lacag-bixinta' : 'Payment Method'}
             </label>
-            <select
+            <CustomSelect
               value={payMethod}
-              onChange={e => setPayMethod(e.target.value as PaymentMethod)}
-              className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white text-xs font-semibold focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
-            >
-              <option value="sahal">Golis Sahal (+252 090) — Ugu Muhiimsan Gaalkacyo</option>
-              <option value="cash">Lacag Caddaan ah (Cash)</option>
-              <option value="evc">EVC Plus (Hormuud)</option>
-              <option value="edahab">eDahab (Somtel)</option>
-              <option value="card">Bank Transfer / Kaadh</option>
-            </select>
+              onChange={val => setPayMethod(val as PaymentMethod)}
+              options={[
+                { value: 'sahal', label: 'Golis Sahal (+252 090)', sublabel: 'Sahal Mobile Money — Ugu muhiimsan deegaanka' },
+                { value: 'cash', label: 'Lacag Caddaan ah (Cash)', sublabel: 'Shilinka ama Doolarka tooska ah' },
+                { value: 'evc', label: 'EVC Plus (Hormuud)', sublabel: '*712# Mobile Wallet' },
+                { value: 'edahab', label: 'eDahab (Somtel)', sublabel: '*110# Somtel Wallet' },
+                { value: 'card', label: 'Bank Transfer / Kaadh', sublabel: 'Xawaalad ama Bank Account' }
+              ]}
+              placeholder={language === 'so' ? 'Dooro Habka Lacag-bixinta...' : 'Select Payment Method...'}
+            />
           </div>
 
           <div>

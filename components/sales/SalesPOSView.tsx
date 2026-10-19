@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Fuel,
   Flame,
@@ -16,11 +16,13 @@ import {
   RotateCcw,
   User,
   ShieldAlert,
-  Zap
+  Zap,
+  Edit3
 } from 'lucide-react';
 import { Tank, Customer, Sale, User as AppUser, FuelTypeCode, PaymentMethod } from '@/lib/types';
 import { translations, Language } from '@/lib/translations';
 import { Modal } from '@/components/ui/Modal';
+import { CustomSelect } from '@/components/ui/CustomSelect';
 
 interface SalesPOSViewProps {
   tanks: Tank[];
@@ -68,14 +70,26 @@ export const SalesPOSView: React.FC<SalesPOSViewProps> = ({
     ? sales.filter(s => s.cashierId === currentUser.id)
     : sales;
 
-  // Find active tank
+  // Find active tank from live state
   const currentTank = tanks.find(t => t.fuelType === selectedFuel) || tanks[0];
-  const unitPrice = currentTank ? currentTank.unitPrice : 1.70;
+  const tankUnitPrice = currentTank ? currentTank.unitPrice : 1.15;
+
+  // Custom editable selling price per unit ($/L or $/cylinder)
+  const [customPrice, setCustomPrice] = useState<string>(tankUnitPrice.toFixed(2));
+
+  // Automatically update selling price when selected fuel or tank's live unit price changes
+  useEffect(() => {
+    if (currentTank) {
+      setCustomPrice(currentTank.unitPrice.toFixed(2));
+    }
+  }, [selectedFuel, currentTank?.unitPrice]);
+
+  const activeUnitPrice = parseFloat(customPrice) > 0 ? parseFloat(customPrice) : tankUnitPrice;
 
   // Convert gallon if selected
   const rawQty = parseFloat(quantityInput) || 0;
   const litres = unit === 'Gal' ? rawQty * 3.78541 : rawQty;
-  const totalAmount = parseFloat((litres * unitPrice).toFixed(2));
+  const totalAmount = parseFloat((litres * activeUnitPrice).toFixed(2));
 
   // Customer info if credit or selected
   const activeCustomer = customers.find(c => c.id === selectedCustomerId);
@@ -88,7 +102,7 @@ export const SalesPOSView: React.FC<SalesPOSViewProps> = ({
 
   const handlePresetAmount = (dollarVal: number) => {
     setUnit('L');
-    const calculatedLitres = (dollarVal / unitPrice).toFixed(2);
+    const calculatedLitres = (dollarVal / activeUnitPrice).toFixed(2);
     setQuantityInput(calculatedLitres);
   };
 
@@ -127,7 +141,7 @@ export const SalesPOSView: React.FC<SalesPOSViewProps> = ({
       fuelType: selectedFuel,
       tankId: currentTank.id,
       litres: parseFloat(litres.toFixed(2)),
-      unitPrice,
+      unitPrice: activeUnitPrice,
       totalAmount,
       paymentMethod: selectedPayment,
       customerId: activeCustomer ? activeCustomer.id : undefined,
@@ -175,20 +189,27 @@ export const SalesPOSView: React.FC<SalesPOSViewProps> = ({
             <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">
               {t.customerOptional}
             </label>
-            <div className="flex gap-3">
-              <select
-                value={selectedCustomerId}
-                onChange={e => setSelectedCustomerId(e.target.value)}
-                className="w-full bg-[#F8F9FA] hover:bg-slate-100/60 focus:bg-white text-slate-800 text-sm font-medium px-4 py-2.5 rounded-xl border border-[#ECEEF2] focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-800 transition-all"
-              >
-                <option value="">{t.walkInCustomer}</option>
-                {customers.map(c => (
-                  <option key={c.id} value={c.id}>
-                    {c.name} ({c.phone}) - {language === 'so' ? 'Deyn:' : 'Debt:'} ${c.currentBalance.toFixed(2)} / Max: ${c.creditLimit}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <CustomSelect
+              value={selectedCustomerId}
+              onChange={val => setSelectedCustomerId(val)}
+              options={[
+                {
+                  value: '',
+                  label: t.walkInCustomer,
+                  sublabel: language === 'so' ? 'Iib caddaan ama mobile ah (Walk-in retail)' : 'General walk-in cash customer'
+                },
+                ...customers.map(c => ({
+                  value: c.id,
+                  label: `${c.name} (${c.phone})`,
+                  sublabel: `${language === 'so' ? 'Dayn:' : 'Debt:'} $${c.currentBalance.toFixed(2)} / Max: $${c.creditLimit}`,
+                  badge: c.currentBalance > 0 ? `$${c.currentBalance.toFixed(0)} Deyn` : 'Deyn la\'aan',
+                  badgeColor: c.currentBalance > 0 ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                }))
+              ]}
+              placeholder={t.walkInCustomer}
+              showSearch={true}
+              searchPlaceholder={language === 'so' ? 'Raadi magac ama telefoon...' : 'Search customer...'}
+            />
             {activeCustomer && (
               <div className="mt-2 p-2.5 bg-blue-50/70 border border-blue-100 rounded-xl text-xs flex items-center justify-between">
                 <span className="font-semibold text-blue-900">
@@ -236,23 +257,29 @@ export const SalesPOSView: React.FC<SalesPOSViewProps> = ({
             </div>
           </div>
 
-          {/* Fuel Type Cards */}
+          {/* Fuel Type Cards (Live Telemetry & Selling Price from Tanks) */}
           <div>
-            <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">
-              {t.selectFuel}
-            </label>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-xs font-bold text-slate-600 uppercase tracking-wider">
+                {t.selectFuel}
+              </label>
+              <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                {language === 'so' ? 'Xogta Tooska ah ee Haamaha' : 'Live Tank Stock & Rates'}
+              </span>
+            </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {fuelTypes.map(f => {
                 const tank = tanks.find(t => t.fuelType === f.code);
                 const isSelected = selectedFuel === f.code;
-                const price = tank ? tank.unitPrice : f.price;
+                const liveTankPrice = tank ? tank.unitPrice : f.price;
+                const isLow = tank ? tank.currentLevel <= tank.minThreshold : false;
 
                 return (
                   <button
                     key={f.code}
                     type="button"
                     onClick={() => setSelectedFuel(f.code)}
-                    className={`p-3.5 rounded-2xl border text-left flex flex-col justify-between transition-all relative overflow-hidden ${
+                    className={`p-3.5 rounded-2xl border text-left flex flex-col justify-between transition-all relative overflow-hidden cursor-pointer ${
                       isSelected
                         ? 'border-blue-600 bg-blue-50/50 shadow-md ring-2 ring-blue-600/20'
                         : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50'
@@ -272,22 +299,70 @@ export const SalesPOSView: React.FC<SalesPOSViewProps> = ({
                       >
                         <Flame className="w-4 h-4" />
                       </div>
-                      {isSelected && (
+                      {isSelected ? (
                         <span className="w-2 h-2 rounded-full bg-blue-600 animate-ping" />
-                      )}
+                      ) : isLow ? (
+                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-rose-100 text-rose-700">Hoos</span>
+                      ) : null}
                     </div>
                     <div>
                       <div className="text-xs font-bold text-slate-800">{f.name}</div>
                       <div className="text-sm font-black text-blue-600 mt-1">
-                        ${price.toFixed(2)}{f.unitLabel}
+                        ${liveTankPrice.toFixed(2)}{f.unitLabel}
                       </div>
-                      <div className="text-[10px] text-slate-400 mt-0.5">
-                        {language === 'so' ? 'Kaydka:' : 'Stock:'} {tank ? tank.currentLevel.toLocaleString() : 0} {f.code === 'LPG' ? (language === 'so' ? 'Dhululubo' : 'Cyl') : 'L'}
+                      <div className="text-[10px] text-slate-500 font-medium mt-0.5">
+                        {language === 'so' ? 'Kaydka:' : 'Stock:'} <b className="text-slate-800">{tank ? tank.currentLevel.toLocaleString() : 0}</b> {f.code === 'LPG' ? (language === 'so' ? 'Dhululubo' : 'Cyl') : 'L'}
                       </div>
                     </div>
                   </button>
                 );
               })}
+            </div>
+          </div>
+
+          {/* Editable Unit Price Field (Custom or Live Tank Price) */}
+          <div className="p-3 bg-gradient-to-r from-blue-50/80 via-slate-50 to-emerald-50/60 rounded-2xl border border-blue-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0">
+                <Edit3 className="w-4 h-4" />
+              </div>
+              <div>
+                <span className="block text-xs font-bold text-slate-900 leading-tight">
+                  {language === 'so' ? 'Qiimaha Iibka ee Xilligan (Selling Price)' : 'Current Selling Unit Price'}
+                </span>
+                <span className="text-[11px] text-slate-500 font-medium">
+                  {language === 'so'
+                    ? `Qiimaha rasmiga ah ee haanta: $${tankUnitPrice.toFixed(2)}${isLPG ? '/Dhululubo' : '/L'} — waad beddeli kartaa intaad rabto`
+                    : `Configured tank price: $${tankUnitPrice.toFixed(2)}${isLPG ? '/Cyl' : '/L'} — freely adjustable`}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 self-end sm:self-center">
+              <div className="relative w-32 sm:w-36">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-slate-400 text-sm">$</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  value={customPrice}
+                  onChange={e => setCustomPrice(e.target.value)}
+                  placeholder={tankUnitPrice.toFixed(2)}
+                  className="w-full h-9.5 pl-7 pr-3 bg-white border border-blue-200 focus:border-blue-600 rounded-xl text-sm font-black text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-right shadow-2xs"
+                />
+              </div>
+
+              {parseFloat(customPrice) !== tankUnitPrice && (
+                <button
+                  type="button"
+                  onClick={() => setCustomPrice(tankUnitPrice.toFixed(2))}
+                  className="px-2.5 py-1.5 h-9.5 text-xs font-bold text-blue-700 bg-white hover:bg-blue-50 border border-blue-200 rounded-xl transition-all shadow-2xs flex items-center gap-1 cursor-pointer"
+                  title={language === 'so' ? 'Dib ugu celi qiimaha rasmiga ah ee haanta' : 'Reset to official tank rate'}
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>{language === 'so' ? 'Dib u celi' : 'Reset'}</span>
+                </button>
+              )}
             </div>
           </div>
 
@@ -391,7 +466,7 @@ export const SalesPOSView: React.FC<SalesPOSViewProps> = ({
               </div>
               <div className="flex items-center justify-between text-slate-500">
                 <span>{t.unitPrice}</span>
-                <span className="font-bold text-slate-800">${unitPrice.toFixed(2)}{isLPG ? (language === 'so' ? '/Dhululubo' : '/Cyl') : '/L'}</span>
+                <span className="font-bold text-slate-800">${activeUnitPrice.toFixed(2)}{isLPG ? (language === 'so' ? '/Dhululubo' : '/Cyl') : '/L'}</span>
               </div>
               <div className="flex items-center justify-between text-slate-500">
                 <span>{language === 'so' ? 'Habka lacagta' : 'Payment'}</span>

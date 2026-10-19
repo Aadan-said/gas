@@ -19,6 +19,7 @@ import {
 import { Expense, ExpenseCategory, User, Sale, Customer } from '@/lib/types';
 import { translations, Language } from '@/lib/translations';
 import { Modal } from '@/components/ui/Modal';
+import { CustomSelect } from '@/components/ui/CustomSelect';
 
 interface FinanceViewProps {
   expenses: Expense[];
@@ -275,17 +276,15 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
             <label className="block font-bold text-slate-700 mb-1.5">
               {language === 'so' ? 'Qaybta Kharashka (Category)' : 'Expense Category'}
             </label>
-            <select
+            <CustomSelect
               value={category}
-              onChange={e => setCategory(e.target.value as ExpenseCategory)}
-              className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
-            >
-              {categories.map(cat => (
-                <option key={cat} value={cat}>
-                  {CATEGORY_MAP[cat]?.[language] || cat}
-                </option>
-              ))}
-            </select>
+              onChange={val => setCategory(val as ExpenseCategory)}
+              options={categories.map(cat => ({
+                value: cat,
+                label: CATEGORY_MAP[cat]?.[language] || cat
+              }))}
+              placeholder={language === 'so' ? 'Dooro Qaybta Kharashka...' : 'Select Category...'}
+            />
           </div>
 
           <div>

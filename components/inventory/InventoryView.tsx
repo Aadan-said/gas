@@ -17,6 +17,7 @@ import {
 import { Tank, InventoryMovement, User } from '@/lib/types';
 import { translations, Language } from '@/lib/translations';
 import { Modal } from '@/components/ui/Modal';
+import { CustomSelect } from '@/components/ui/CustomSelect';
 
 interface InventoryViewProps {
   tanks: Tank[];
@@ -296,17 +297,18 @@ export const InventoryView: React.FC<InventoryViewProps> = ({
               <label className="block font-bold text-slate-700 mb-1.5">
                 {language === 'so' ? 'Dooro Haanta' : 'Select Tank'}
               </label>
-              <select
+              <CustomSelect
                 value={selectedTankId}
-                onChange={e => setSelectedTankId(e.target.value)}
-                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
-              >
-                {tanks.map(tank => (
-                  <option key={tank.id} value={tank.id}>
-                    {tank.name} ({tank.tankNumber}) — {language === 'so' ? 'Hadda ku jirta:' : 'Current:'} {tank.currentLevel.toLocaleString()} L
-                  </option>
-                ))}
-              </select>
+                onChange={val => setSelectedTankId(val)}
+                options={tanks.map(tank => ({
+                  value: tank.id,
+                  label: `${tank.tankNumber} — ${tank.name}`,
+                  sublabel: `${language === 'so' ? 'Hadda ku jirta:' : 'Current:'} ${tank.currentLevel.toLocaleString()} L / ${tank.capacity.toLocaleString()} L`,
+                  badge: `${Math.round((tank.currentLevel / tank.capacity) * 100)}%`,
+                  badgeColor: tank.currentLevel <= tank.minThreshold ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                }))}
+                placeholder={language === 'so' ? 'Dooro Haanta...' : 'Select Tank...'}
+              />
             </div>
 
             {/* Live calculation card */}

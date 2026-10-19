@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { Flame, Printer, Plus, X, QrCode } from 'lucide-react';
 import { Sale, StationConfig } from '@/lib/types';
 import { Language } from '@/lib/translations';
+import { GasFlowLogo } from '@/components/ui';
 
 interface ReceiptModalProps {
   sale: Sale | null;
@@ -63,14 +64,10 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
         <div
           className="px-4 py-3.5 flex flex-col items-center text-center bg-[#F8F9FA] border-b border-dashed border-[#ECEEF2]"
         >
-          <div
-            className="w-9 h-9 rounded-xl flex items-center justify-center mb-1.5 shadow-sm bg-[#111318]"
-          >
-            <Flame className="w-4 h-4 fill-white text-white" />
+          <div className="flex justify-center mb-1.5">
+            <GasFlowLogo size="md" variant="compact" />
           </div>
-          <h2 className="text-base font-extrabold text-slate-900 leading-tight">GasFlow</h2>
-          <p className="text-[10.5px] font-semibold text-slate-500">Petroleum Station System</p>
-          <p className="text-[9.5px] text-slate-400 mt-0.5">{station.branch}</p>
+          <p className="text-[9.5px] text-slate-400 mt-1">{station.branch}</p>
           <p className="text-[9.5px] font-mono text-slate-400">Tel: {station.phone}</p>
         </div>
 

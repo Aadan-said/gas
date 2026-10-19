@@ -18,6 +18,7 @@ import {
 import { Tank, FuelDelivery, FuelTypeCode, User } from '@/lib/types';
 import { translations, Language } from '@/lib/translations';
 import { Modal } from '@/components/ui/Modal';
+import { CustomSelect } from '@/components/ui/CustomSelect';
 
 interface TanksViewProps {
   tanks: Tank[];
@@ -357,17 +358,18 @@ export const TanksView: React.FC<TanksViewProps> = ({
             <label className="block font-bold text-slate-700 mb-1.5">
               {language === 'so' ? 'Dooro Haanta' : 'Select Tank'}
             </label>
-            <select
+            <CustomSelect
               value={selectedTankId}
-              onChange={e => setSelectedTankId(e.target.value)}
-              className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
-            >
-              {tanks.map(tank => (
-                <option key={tank.id} value={tank.id}>
-                  {tank.tankNumber} - {tank.name} (Hadda: {tank.currentLevel.toLocaleString()} L / Max: {tank.capacity.toLocaleString()} L)
-                </option>
-              ))}
-            </select>
+              onChange={val => setSelectedTankId(val)}
+              options={tanks.map(tank => ({
+                value: tank.id,
+                label: `${tank.tankNumber} — ${tank.name}`,
+                sublabel: `Hadda ku jirta: ${tank.currentLevel.toLocaleString()} L / Max: ${tank.capacity.toLocaleString()} L`,
+                badge: `${Math.round((tank.currentLevel / tank.capacity) * 100)}%`,
+                badgeColor: tank.currentLevel <= tank.minThreshold ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+              }))}
+              placeholder={language === 'so' ? 'Dooro Haanta...' : 'Select Tank...'}
+            />
           </div>
 
           {/* Live Tank Telemetry Badge in Modal */}
@@ -507,17 +509,18 @@ export const TanksView: React.FC<TanksViewProps> = ({
             <label className="block font-bold text-slate-700 mb-1.5">
               {language === 'so' ? 'Dooro Haanta' : 'Select Tank'}
             </label>
-            <select
+            <CustomSelect
               value={calibTankId}
-              onChange={e => setCalibTankId(e.target.value)}
-              className="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-amber-500/20 focus:outline-none"
-            >
-              {tanks.map(tank => (
-                <option key={tank.id} value={tank.id}>
-                  {tank.name} ({language === 'so' ? 'Hadda nidaamka ku qoran:' : 'Current recorded:'} {tank.currentLevel.toLocaleString()} L)
-                </option>
-              ))}
-            </select>
+              onChange={val => setCalibTankId(val)}
+              options={tanks.map(tank => ({
+                value: tank.id,
+                label: `${tank.name} (${tank.tankNumber})`,
+                sublabel: `${language === 'so' ? 'Hadda ku jirta:' : 'Current level:'} ${tank.currentLevel.toLocaleString()} L / ${tank.capacity.toLocaleString()} L`,
+                badge: `${Math.round((tank.currentLevel / tank.capacity) * 100)}%`,
+                badgeColor: tank.currentLevel <= tank.minThreshold ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-blue-50 text-blue-700 border border-blue-200'
+              }))}
+              placeholder={language === 'so' ? 'Dooro Haanta...' : 'Select Tank...'}
+            />
           </div>
 
           <div>

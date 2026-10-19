@@ -15,6 +15,7 @@ const PUBLIC_API_ROUTES = [
   '/api/auth/setup-status',
   '/api/state',
   '/api/health',
+  '/api/developer/license',
 ];
 
 export async function proxy(req: NextRequest) {

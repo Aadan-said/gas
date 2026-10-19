@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { User } from '@/lib/types';
 import { translations, Language } from '@/lib/translations';
+import { GasFlowLogo } from '@/components/ui';
 
 interface LoginModalProps {
   users: User[];
@@ -95,16 +96,9 @@ export const LoginModal: React.FC<LoginModalProps> = ({ users, onLogin, language
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-slate-950/65 backdrop-blur-sm overflow-y-auto animate-in fade-in duration-200">
       <div className="bg-white max-w-sm w-full rounded-3xl p-5 sm:p-7 shadow-2xl border border-slate-200/90 flex flex-col items-center text-center my-auto max-h-[92dvh] overflow-y-auto animate-in zoom-in-95 duration-200">
         {/* Brand */}
-        <div
-          className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg mb-3 shrink-0"
-          style={{ background: 'linear-gradient(135deg, #2563EB, #7C3AED)', boxShadow: '0 4px 20px rgba(37,99,235,0.3)' }}
-        >
-          <Flame className="w-7 h-7 fill-white text-white" />
+        <div className="mb-4">
+          <GasFlowLogo size="lg" variant="compact" />
         </div>
-        <h1 className="text-xl font-black text-slate-900">GasFlow</h1>
-        <p className="text-[11px] font-semibold text-slate-500 mt-0.5">
-          {language === 'so' ? 'Nidaamka Kaalimaha Shidaalka' : 'Petroleum Station System'}
-        </p>
 
         <div className="mt-4 mb-3 text-left w-full">
           <h2 className="text-[15px] font-bold text-slate-900">{t.signIn}</h2>

@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { User, UserRole } from '@/lib/types';
 import { translations, Language } from '@/lib/translations';
+import { CustomSelect } from '@/components/ui/CustomSelect';
 
 interface StaffViewProps {
   users: User[];
@@ -265,23 +266,21 @@ export const StaffView: React.FC<StaffViewProps> = ({
               <label className="block text-xs font-bold text-slate-700 mb-1.5">
                 {language === 'so' ? 'Doorka Loo Xilsaaray' : 'Assigned Role'}
               </label>
-              <div className="relative">
-                <select
-                  value={role}
-                  onChange={e => setRole(e.target.value as UserRole)}
-                  className="w-full h-10 pl-3 pr-8 rounded-xl border border-slate-200 bg-slate-50/80 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15 text-xs text-slate-900 font-semibold appearance-none transition-all cursor-pointer outline-none"
-                >
-                  {assignableRoles.map(r => {
-                    const rc = ROLE_CONFIG[r];
-                    return (
-                      <option key={r} value={r}>
-                        {language === 'so' ? `${rc.labelSo} — ${rc.descSo}` : `${rc.label} — ${rc.desc}`}
-                      </option>
-                    );
-                  })}
-                </select>
-                <ChevronDown className="w-3.5 h-3.5 absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-              </div>
+              <CustomSelect
+                value={role}
+                onChange={val => setRole(val as UserRole)}
+                options={assignableRoles.map(r => {
+                  const rc = ROLE_CONFIG[r];
+                  return {
+                    value: r,
+                    label: language === 'so' ? rc.labelSo : rc.label,
+                    sublabel: language === 'so' ? rc.descSo : rc.desc,
+                    badge: r.toUpperCase(),
+                    badgeColor: `border`
+                  };
+                })}
+                placeholder={language === 'so' ? 'Dooro Kaalinta...' : 'Select Role...'}
+              />
               {/* Role preview pill */}
               <div className="mt-2 flex items-center gap-1.5 flex-wrap">
                 <span

@@ -55,6 +55,7 @@ import { ReportsView } from '@/components/reports';
 import { StaffView } from '@/components/staff';
 import { SyncEngineModal } from '@/components/sync';
 import { SettingsView } from '@/components/settings';
+import { DeveloperLockoutModal, DeveloperControlModal } from '@/components/developer';
 import {
   CheckCircle,
   AlertCircle,
@@ -88,6 +89,22 @@ export default function Home() {
   const [authInitialMode, setAuthInitialMode] = useState<'login' | 'register' | 'forgot' | '2fa'>('login');
   const mainRef = useRef<HTMLElement>(null);
 
+  // Developer Kill-Switch License State
+  const [license, setLicense] = useState<{
+    isSuspended: boolean;
+    suspendedReason: string;
+    developerContact: string;
+    graceWarning: string | null;
+    suspendedUserIds: string[];
+  }>({
+    isSuspended: false,
+    suspendedReason: 'Khidmadda adeegga softweerka ee bishan ayaan la bixin. Fadlan la xiriir Software Engineer-ka si nidaamka dib loogu furo.',
+    developerContact: 'Software Engineer: Aadan Said — Tel/WhatsApp: +252 61 2100000',
+    graceWarning: null,
+    suspendedUserIds: []
+  });
+  const [showDeveloperControl, setShowDeveloperControl] = useState(false);
+
   // Automatically reset scroll position to top whenever navigating between screens/views
   useEffect(() => {
     if (mainRef.current) {
@@ -97,6 +114,94 @@ export default function Home() {
       window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
     }
   }, [currentView]);
+
+  // License fetcher from developer control API
+  const fetchLicense = useCallback(async () => {
+    try {
+      const res = await fetch('/api/developer/license');
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.license) {
+          setLicense({
+            isSuspended: Boolean(data.license.isSuspended),
+            suspendedReason: data.license.suspendedReason || 'Khidmadda adeegga softweerka ee bishan ayaan la bixin. Fadlan la xiriir Software Engineer-ka si nidaamka dib loogu furo.',
+            developerContact: data.license.developerContact || 'Software Engineer: Aadan Said — Tel/WhatsApp: +252 61 2100000',
+            graceWarning: data.license.graceWarning || null,
+            suspendedUserIds: Array.isArray(data.license.suspendedUserIds) ? data.license.suspendedUserIds : []
+          });
+        }
+      }
+    } catch (e) {
+      // offline fallback
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchLicense();
+    const interval = setInterval(fetchLicense, 10000);
+    return () => clearInterval(interval);
+  }, [fetchLicense]);
+
+  // Global Developer Shortcut: Ctrl + Alt + D
+  useEffect(() => {
+    const handleDevKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.altKey && e.key.toLowerCase() === 'd') {
+        e.preventDefault();
+        setShowDeveloperControl(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleDevKey);
+    return () => window.removeEventListener('keydown', handleDevKey);
+  }, []);
+
+  const handleMasterUnlock = async (pin: string) => {
+    try {
+      const res = await fetch('/api/developer/license', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          masterPin: pin,
+          isSuspended: false,
+          suspendedUserIds: []
+        })
+      });
+      const data = await res.json();
+      if (data.success && data.license) {
+        setLicense(data.license);
+        showToast(language === 'so' ? 'Nidaamka si guul leh baa loo furay!' : 'System unlocked successfully!', 'success');
+        return { success: true };
+      }
+      return { success: false, message: data.error || 'Master PIN-ku waa khalad.' };
+    } catch {
+      return { success: false, message: 'Server-ka laguma xiriiri karo.' };
+    }
+  };
+
+  const handleSaveLicense = async (saveData: {
+    masterPin: string;
+    isSuspended: boolean;
+    suspendedReason: string;
+    developerContact: string;
+    graceWarning: string | null;
+    suspendedUserIds: string[];
+  }) => {
+    try {
+      const res = await fetch('/api/developer/license', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(saveData)
+      });
+      const data = await res.json();
+      if (data.success && data.license) {
+        setLicense(data.license);
+        showToast(language === 'so' ? 'Awoodda Developer-ka waa la dhaqangeliyay!' : 'Developer settings saved!', 'success');
+        return { success: true };
+      }
+      return { success: false, message: data.error || 'PIN-ka Developer-ku waa khalad.' };
+    } catch {
+      return { success: false, message: 'Khalad ayaa dhacay.' };
+    }
+  };
 
   // Toast system
   const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'success') => {
@@ -202,13 +307,39 @@ export default function Home() {
 
   // 0. Authentication Handlers
   const handleLogin = (user: User) => {
+    // Check if user is individually suspended by the software developer
+    if (license?.suspendedUserIds?.includes(user.id)) {
+      showToast(
+        language === 'so'
+          ? 'Akoonkaaga waxaa hakiyay Software Engineer-ka. Fadlan la xiriir Developer-ka.'
+          : 'Your account has been suspended by the Software Engineer.',
+        'error'
+      );
+      return;
+    }
+
     setIsAuthenticated(true);
     setState(prev => ({ ...prev, currentUser: user, activeDeviceId: getDeviceId() }));
     refreshStationState(user).catch(() => {});
     if (typeof window !== 'undefined') {
       sessionStorage.setItem('gasflow_session_active', 'true');
     }
-    setCurrentView(user.role === 'cashier' ? 'sales' : 'dashboard');
+
+    // Role-based front landing views:
+    // Shuboole (Cashier) -> sales
+    // Xisaabiye (Accountant) -> finance
+    // Maareeye (Manager) -> tanks
+    // Maamule (Admin) -> dashboard
+    if (user.role === 'cashier') {
+      setCurrentView('sales');
+    } else if (user.role === 'accountant') {
+      setCurrentView('finance');
+    } else if (user.role === 'manager') {
+      setCurrentView('tanks');
+    } else {
+      setCurrentView('dashboard');
+    }
+
     showToast(
       language === 'so'
         ? `Ku soo dhowow GasFlow, ${user.name} (${user.role.toUpperCase()})!`
@@ -621,6 +752,24 @@ export default function Home() {
           onLanguageChange={setLanguage}
           initialMode={authInitialMode}
         />
+
+        {/* Developer Kill-Switch Remote Lockout Modal */}
+        <DeveloperLockoutModal
+          isOpen={Boolean(license.isSuspended)}
+          suspendedReason={license.suspendedReason}
+          developerContact={license.developerContact}
+          onMasterUnlock={handleMasterUnlock}
+          deviceId={state.activeDeviceId || getDeviceId()}
+        />
+
+        {/* Developer Remote Management Panel Modal */}
+        <DeveloperControlModal
+          isOpen={showDeveloperControl}
+          onClose={() => setShowDeveloperControl(false)}
+          users={state.users}
+          currentLicense={license}
+          onSaveLicense={handleSaveLicense}
+        />
       </>
     );
   }
@@ -683,6 +832,10 @@ export default function Home() {
             tanks={state.tanks}
             customers={state.customers}
             expenses={state.expenses}
+            deliveries={state.deliveries}
+            auditLogs={state.auditLogs}
+            developerGraceWarning={license?.graceWarning}
+            onOpenDeveloperControl={() => setShowDeveloperControl(true)}
           />
 
           {/* Active View */}
@@ -912,6 +1065,24 @@ export default function Home() {
           language={language}
         />
       )}
+
+      {/* Developer Kill-Switch Remote Lockout Modal */}
+      <DeveloperLockoutModal
+        isOpen={Boolean(license.isSuspended || (currentUser?.id && license.suspendedUserIds?.includes(currentUser.id)))}
+        suspendedReason={license.suspendedReason}
+        developerContact={license.developerContact}
+        onMasterUnlock={handleMasterUnlock}
+        deviceId={state.activeDeviceId || getDeviceId()}
+      />
+
+      {/* Developer Remote Management Panel Modal */}
+      <DeveloperControlModal
+        isOpen={showDeveloperControl}
+        onClose={() => setShowDeveloperControl(false)}
+        users={state.users}
+        currentLicense={license}
+        onSaveLicense={handleSaveLicense}
+      />
     </div>
   );
 }

@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { NetworkMode, UserRole } from '@/lib/types';
 import { translations, Language } from '@/lib/translations';
+import { GasFlowLogo } from '@/components/ui';
 
 interface SidebarProps {
   currentView: string;
@@ -103,19 +104,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     <div className="flex flex-col h-full bg-white select-none">
       {/* 1. Brand Logo Header */}
       <div className="px-5 py-4 flex items-center justify-between border-b border-[#ECEEF2]">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-[#111318] flex items-center justify-center shrink-0 shadow-sm">
-            <Flame className="w-4 h-4 text-white fill-white" />
-          </div>
-          <div>
-            <div className="text-[14px] font-bold tracking-tight text-[#0F172A] leading-snug">
-              GasFlow
-            </div>
-            <p className="text-[10px] font-medium text-slate-400">
-              Station CRM & POS
-            </p>
-          </div>
-        </div>
+        <GasFlowLogo size="md" variant="compact" />
 
         {isMobile && (
           <button

@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { Sale, Tank, User as AppUser, NetworkMode } from '@/lib/types';
 import { translations, Language } from '@/lib/translations';
+import { GasFlowLogo } from '@/components/ui';
 
 interface MobileCashierViewProps {
   currentUser: AppUser;
@@ -69,12 +70,7 @@ export const MobileCashierView: React.FC<MobileCashierViewProps> = ({
         <button className="p-1 text-slate-700">
           <Menu className="w-5 h-5" />
         </button>
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center">
-            <Flame className="w-4 h-4 fill-white" />
-          </div>
-          <span className="font-black text-slate-900 tracking-tight text-base">GasFlow</span>
-        </div>
+        <GasFlowLogo size="xs" variant="compact" />
         <div className="flex items-center gap-1 bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-full text-[10px] font-bold border border-emerald-200">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
           <span>{networkMode === 'cloud_online' ? 'Online' : 'LAN Only'}</span>

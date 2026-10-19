@@ -169,7 +169,7 @@
       "pin": "****",
       "status": "active",
       "branch": "Main Branch",
-      "lastLogin": "2026-10-18T13:24:11.754Z",
+      "lastLogin": "2026-10-19T13:04:59.900Z",
       "twoFactorEnabled": false,
       "organizationId": "st_1791985142658_st6ke"
     },
@@ -260,7 +260,7 @@
       "fuelType": "PMS",
       "name": "Baasiin (PMS)",
       "capacity": 10000,
-      "currentLevel": 4950,
+      "currentLevel": 4930,
       "unitPrice": 1.15,
       "minThreshold": 2000,
       "status": "normal",
@@ -273,7 +273,7 @@
       "fuelType": "AGO",
       "name": "Naafto (AGO)",
       "capacity": 10000,
-      "currentLevel": 4500,
+      "currentLevel": 4490,
       "unitPrice": 1.2,
       "minThreshold": 2000,
       "status": "critical",
@@ -299,11 +299,11 @@
       "fuelType": "LPG",
       "name": "Gaaska LPG (Dhululubo)",
       "capacity": 10000,
-      "currentLevel": 4500,
+      "currentLevel": 4550,
       "unitPrice": 20,
       "minThreshold": 2000,
-      "status": "critical",
-      "lastCalibrated": "2026-10-14",
+      "status": "normal",
+      "lastCalibrated": "2026-10-19",
       "organizationId": "st_1791985142658_st6ke"
     }
   ],
@@ -516,6 +516,40 @@
       "paymentStatus": "paid",
       "createdAt": "2026-10-17T14:31:05.445Z",
       "syncStatus": "synced"
+    },
+    {
+      "id": "sal_1792415188022_kc5r3",
+      "saleNumber": "INV-00007",
+      "stationId": "st_1791985142658_st6ke",
+      "deviceId": "DEV-UI7RJSLX",
+      "cashierId": "u_1791985142658_7l5zi",
+      "cashierName": "farhaan ali",
+      "fuelType": "PMS",
+      "tankId": "st_1791985142658_st6ke_t1",
+      "litres": 20,
+      "unitPrice": 1.15,
+      "totalAmount": 23,
+      "paymentMethod": "sahal",
+      "paymentStatus": "paid",
+      "createdAt": "2026-10-19T13:06:28.022Z",
+      "syncStatus": "synced"
+    },
+    {
+      "id": "sal_1792419274607_uruhh",
+      "saleNumber": "INV-00008",
+      "stationId": "st_1791985142658_st6ke",
+      "deviceId": "DEV-UI7RJSLX",
+      "cashierId": "u_1791985142658_7l5zi",
+      "cashierName": "farhaan ali",
+      "fuelType": "AGO",
+      "tankId": "st_1791985142658_st6ke_t2",
+      "litres": 10,
+      "unitPrice": 1.2,
+      "totalAmount": 12,
+      "paymentMethod": "sahal",
+      "paymentStatus": "paid",
+      "createdAt": "2026-10-19T14:14:34.607Z",
+      "syncStatus": "synced"
     }
   ],
   "deliveries": [
@@ -613,6 +647,45 @@
       "referenceId": "sal_1792247465445_e8esp",
       "note": "Sale #INV-00006",
       "createdAt": "2026-10-17T14:31:05.445Z"
+    },
+    {
+      "id": "mov_1792415188022_9edc5",
+      "organizationId": "st_1791985142658_st6ke",
+      "tankId": "st_1791985142658_st6ke_t1",
+      "fuelType": "PMS",
+      "type": "sale",
+      "quantity": -20,
+      "previousLevel": 4950,
+      "newLevel": 4930,
+      "referenceId": "sal_1792415188022_kc5r3",
+      "note": "Sale #INV-00007",
+      "createdAt": "2026-10-19T13:06:28.022Z"
+    },
+    {
+      "id": "mov_1792418223943_yd83r",
+      "organizationId": "st_1791985142658_st6ke",
+      "tankId": "st_1791985142658_st6ke_t4",
+      "fuelType": "LPG",
+      "type": "adjustment",
+      "quantity": 50,
+      "previousLevel": 4500,
+      "newLevel": 4550,
+      "referenceId": "cal_1792418223944_973md",
+      "note": "Tijaabo bam (Pump test / Calibration)",
+      "createdAt": "2026-10-19T13:57:03.944Z"
+    },
+    {
+      "id": "mov_1792419274607_m1hem",
+      "organizationId": "st_1791985142658_st6ke",
+      "tankId": "st_1791985142658_st6ke_t2",
+      "fuelType": "AGO",
+      "type": "sale",
+      "quantity": -10,
+      "previousLevel": 4500,
+      "newLevel": 4490,
+      "referenceId": "sal_1792419274607_uruhh",
+      "note": "Sale #INV-00008",
+      "createdAt": "2026-10-19T14:14:34.607Z"
     }
   ],
   "customers": [
@@ -1012,6 +1085,33 @@
       "action": "STATION_CONFIG_UPDATE",
       "details": "Updated station settings.",
       "createdAt": "2026-10-18T17:25:45.564Z"
+    },
+    {
+      "id": "aud_1792415188022_zh3s7",
+      "organizationId": "st_1791985142658_st6ke",
+      "userId": "u_1791985142658_7l5zi",
+      "userName": "farhaan ali",
+      "action": "SALE_CREATED",
+      "details": "Sale INV-00007: 20L of PMS for $23.00.",
+      "createdAt": "2026-10-19T13:06:28.022Z"
+    },
+    {
+      "id": "aud_1792418223944_yod68",
+      "organizationId": "st_1791985142658_st6ke",
+      "userId": "u_1791985142658_7l5zi",
+      "userName": "farhaan ali",
+      "action": "TANK_CALIBRATED",
+      "details": "Calibrated Gaaska LPG (Dhululubo): level set from 4500.0L to 4550.0L.",
+      "createdAt": "2026-10-19T13:57:03.944Z"
+    },
+    {
+      "id": "aud_1792419274607_7fafz",
+      "organizationId": "st_1791985142658_st6ke",
+      "userId": "u_1791985142658_7l5zi",
+      "userName": "farhaan ali",
+      "action": "SALE_CREATED",
+      "details": "Sale INV-00008: 10L of AGO for $12.00.",
+      "createdAt": "2026-10-19T14:14:34.607Z"
     }
   ]
 }
