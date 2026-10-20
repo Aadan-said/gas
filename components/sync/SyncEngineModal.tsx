@@ -100,7 +100,7 @@ export const SyncEngineModal: React.FC<SyncEngineModalProps> = ({
           </h1>
           <p className="text-xs sm:text-sm font-medium text-slate-500 mt-0.5">
             {language === 'so'
-              ? 'Qaab-dhismeedka 3-heer ah: Moobillada/Kumbuyuutarrada ↔ Server-ka Saldhigga ↔ Central Cloud.'
+              ? 'Qaab-dhismeedka 3-heer ah: Moobillada/Kumbuyuutarrada ↔ Server-ka Kaalinta ↔ Central Cloud.'
               : 'Production 3-tier sync architecture: Local Station Server, Cloud PostgreSQL & IndexedDB Outbox.'}
           </p>
         </div>
@@ -131,7 +131,7 @@ export const SyncEngineModal: React.FC<SyncEngineModalProps> = ({
         <div className="relative z-10">
           <div className="flex items-center justify-between mb-4">
             <span className="text-xs font-bold text-blue-600 uppercase tracking-widest">
-              {language === 'so' ? 'Qaabka Isku-xirka Qalabka (6-15 Qalab Saldhig Kasta)' : 'Production Distributed Topology (6-15 Devices per Station)'}
+              {language === 'so' ? 'Qaabka Isku-xirka Qalabka (6-15 Qalab Kaalin Kasta)' : 'Production Distributed Topology (6-15 Devices per Station)'}
             </span>
             {lastLatency !== null && (
               <span className="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[10px] font-mono font-bold flex items-center gap-1">
@@ -175,11 +175,11 @@ export const SyncEngineModal: React.FC<SyncEngineModalProps> = ({
                   <Server className="w-5 h-5 text-blue-600" />
                 </div>
                 <h3 className="font-bold text-base text-slate-900">
-                  {language === 'so' ? 'Server-ka Saldhigga (Local)' : 'Local Station Server'}
+                  {language === 'so' ? 'Server-ka Kaalinta (Local)' : 'Local Station Server'}
                 </h3>
                 <p className="text-xs text-slate-500 mt-1 leading-relaxed">
                   {language === 'so'
-                    ? 'Kumbuyuutarka dhexe ee saldhigga oo wata PostgreSQL & Fast LAN Wi-Fi. Haddii internet-ku go\'o, saldhiggu 100% wuu shaqeynayaa.'
+                    ? 'Kumbuyuutarka dhexe ee kaalinta oo wata PostgreSQL & Fast LAN Wi-Fi. Haddii internet-ku go\'o, kaalintu 100% way shaqeynaysaa.'
                     : 'Local PostgreSQL + Fast LAN API. Operates full station when Internet cuts off.'}
                 </p>
               </div>

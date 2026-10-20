@@ -96,7 +96,7 @@ export async function POST(req: NextRequest) {
     const res = NextResponse.json(
       {
         success: true,
-        message: `Maamulaha saldhigga waa la diiwaangeliyay: ${user.name}`,
+        message: `Maamulaha kaalinta waa la diiwaangeliyay: ${user.name}`,
         user,
         station,
         token

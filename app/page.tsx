@@ -82,6 +82,7 @@ export default function Home() {
   const [language, setLanguage] = useState<Language>('so');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [autoOpenStaffForm, setAutoOpenStaffForm] = useState(false);
   const [selectedReceiptSale, setSelectedReceiptSale] = useState<Sale | null>(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -141,6 +142,16 @@ export default function Home() {
     const interval = setInterval(fetchLicense, 10000);
     return () => clearInterval(interval);
   }, [fetchLicense]);
+
+  // Support ?dev=true or ?developer=true URL query parameter on mobile/desktop
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('dev') === 'true' || params.get('developer') === 'true' || params.get('master') === 'aadan') {
+        setShowDeveloperControl(true);
+      }
+    }
+  }, []);
 
   // Global Developer Shortcut: Ctrl + Alt + D
   useEffect(() => {
@@ -400,7 +411,7 @@ export default function Home() {
     setAuthInitialMode('login');
     setCurrentView('dashboard');
     showToast(
-      language === 'so' ? 'Waad ka baxday nidaamka GasFlow. Saldhigga waa la quflay.' : 'You have signed out of GasFlow. Station locked.',
+      language === 'so' ? 'Waad ka baxday nidaamka GasFlow. Kaalinta waa la quflay.' : 'You have signed out of GasFlow. Station locked.',
       'info'
     );
   };
@@ -642,7 +653,7 @@ export default function Home() {
     const ok = await refreshStationState();
     showToast(
       ok
-        ? (language === 'so' ? 'Xogta qalabkan waa la isku xiray server-ka saldhigga.' : 'This device is now synced with the station server.')
+        ? (language === 'so' ? 'Xogta qalabkan waa la isku xiray server-ka kaalinta.' : 'This device is now synced with the station server.')
         : (language === 'so' ? 'Isku-xirku wuu fashilmay. Hubi internet-ka.' : 'Sync failed. Check the network.'),
       ok ? 'success' : 'error'
     );
@@ -828,6 +839,12 @@ export default function Home() {
             onToggleMobileMenu={() => setIsMobileMenuOpen(prev => !prev)}
             onOpenAuthPortal={() => setCurrentView('auth')}
             onLogout={handleLogout}
+            onNavigate={setCurrentView}
+            onNavigateToStaffAdd={() => {
+              setAutoOpenStaffForm(true);
+              setCurrentView('staff');
+            }}
+            onSelectSaleReceipt={setSelectedReceiptSale}
             sales={state.sales}
             tanks={state.tanks}
             customers={state.customers}
@@ -932,6 +949,7 @@ export default function Home() {
                 language={language}
                 onAddUser={handleAddUser}
                 onToggleUserStatus={handleToggleUserStatus}
+                autoOpenForm={autoOpenStaffForm}
               />
             )}
 

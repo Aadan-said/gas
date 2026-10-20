@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
 
     if (user.status !== 'active') {
       return NextResponse.json(
-        { error: 'Akoonkani waa xiran yahay (Inactive). Fadlan la xiriir maamulaha saldhigga / Account is deactivated. Contact station administrator.' },
+        { error: 'Akoonkani waa xiran yahay (Inactive). Fadlan la xiriir maamulaha kaalinta / Account is deactivated. Contact station administrator.' },
         { status: 403 }
       );
     }

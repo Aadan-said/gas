@@ -13,8 +13,8 @@ interface LicenseConfig {
 
 const DEFAULT_LICENSE: LicenseConfig = {
   isSuspended: false,
-  suspendedReason: 'Khidmadda adeegga softweerka ee bishan ayaan la bixin. Fadlan la xiriir Software Engineer-ka.',
-  developerContact: 'Software Engineer: Aadan Said — Tel/WhatsApp: +252 61 2100000',
+  suspendedReason: 'Khidmadda adeegga softweerka ee bishan ayaan la bixin. Fadlan la xiriir Software Engineer-ka si nidaamka dib loogu furo.',
+  developerContact: 'Software Engineer: Aadan Said — Tel/WhatsApp: +252 090 6575473',
   graceWarning: null,
   suspendedUserIds: [],
   updatedAt: new Date().toISOString()
@@ -56,11 +56,46 @@ function writeLicense(lic: LicenseConfig): void {
   }
 }
 
-// Master Passcode known to Developer (Engineer)
-const MASTER_DEV_PIN = '778899';
+// Master Passcodes known only to Developer (Engineer Aadan Said)
+const MASTER_DEV_PINS = ['778899', 'aadan2026', 'aadan7788'];
 
 export async function GET() {
-  const license = readLicense();
+  const license = { ...readLicense() };
+
+  // 1. Direct Cloud Kill-Switch via Vercel Environment Variables
+  if (process.env.GASFLOW_SUSPENDED === 'true' || process.env.NEXT_PUBLIC_GASFLOW_LOCKED === 'true') {
+    license.isSuspended = true;
+    if (process.env.GASFLOW_SUSPENDED_REASON) {
+      license.suspendedReason = process.env.GASFLOW_SUSPENDED_REASON;
+    }
+  }
+
+  if (process.env.GASFLOW_GRACE_WARNING) {
+    license.graceWarning = process.env.GASFLOW_GRACE_WARNING;
+  }
+
+  // 2. Remote Master URL Heartbeat Check (if an external URL or GitHub raw JSON is provided)
+  const remoteUrl = process.env.GASFLOW_REMOTE_LICENSE_URL;
+  if (remoteUrl) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2000);
+      const res = await fetch(remoteUrl, { signal: controller.signal, cache: 'no-store' });
+      clearTimeout(timeoutId);
+      if (res.ok) {
+        const remoteData = await res.json();
+        if (remoteData && typeof remoteData.isSuspended === 'boolean') {
+          license.isSuspended = remoteData.isSuspended;
+          if (remoteData.suspendedReason) license.suspendedReason = remoteData.suspendedReason;
+          if (remoteData.developerContact) license.developerContact = remoteData.developerContact;
+          if (remoteData.graceWarning !== undefined) license.graceWarning = remoteData.graceWarning;
+        }
+      }
+    } catch {
+      // Failover safely to local state if offline or timeout
+    }
+  }
+
   return NextResponse.json({
     success: true,
     license
@@ -79,7 +114,8 @@ export async function POST(req: NextRequest) {
       suspendedUserIds
     } = body;
 
-    if (masterPin !== MASTER_DEV_PIN && masterPin !== 'aadan2026') {
+    const cleanPin = String(masterPin || '').trim();
+    if (!MASTER_DEV_PINS.includes(cleanPin)) {
       return NextResponse.json(
         { success: false, error: 'Koodhka Master Developer PIN waa khalad! / Invalid Master Developer Key.' },
         { status: 401 }
@@ -102,7 +138,7 @@ export async function POST(req: NextRequest) {
       success: true,
       message: updated.isSuspended
         ? 'Nidaamka si guul leh ayaa loo xanibay (System Locked by Developer).'
-        : 'Nidaamka si guul leh ayaa loo furay (System Unlocked).',
+        : 'Nidaamka si guul leh ayaa loo furay (System Unlocked by Developer).',
       license: updated
     });
   } catch (e) {

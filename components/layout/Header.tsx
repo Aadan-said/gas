@@ -28,7 +28,15 @@ import {
   Package,
   Truck,
   Terminal,
-  AlertOctagon
+  AlertOctagon,
+  ArrowRight,
+  Database,
+  Layers,
+  Wallet,
+  BarChart3,
+  RefreshCw,
+  Settings,
+  Sparkles
 } from 'lucide-react';
 import { User, NetworkMode, UserRole, Sale, Tank, Customer, Expense, FuelDelivery, AuditLog } from '@/lib/types';
 import { translations, Language } from '@/lib/translations';
@@ -49,7 +57,10 @@ interface HeaderProps {
   onOpenProfileModal?: () => void;
   onLogout?: () => void;
   onOpenDeveloperControl?: () => void;
-  // Real live system data for notifications
+  onNavigate?: (view: string) => void;
+  onNavigateToStaffAdd?: () => void;
+  onSelectSaleReceipt?: (sale: Sale) => void;
+  // Real live system data for notifications & search
   sales?: Sale[];
   tanks?: Tank[];
   customers?: Customer[];
@@ -87,7 +98,7 @@ const ROLE_STYLES: Record<UserRole, { badge: string; text: string; bg: string; l
     text: '#7C3AED',
     bg: '#F5F3FF',
     label: 'Station Manager',
-    labelSo: 'Maareeye Saldhig',
+    labelSo: 'Maareeye Kaalin',
     descSo: 'Kaydka, Keenista & Shaqaalaha'
   },
   cashier: {
@@ -148,6 +159,9 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenProfileModal,
   onLogout,
   onOpenDeveloperControl,
+  onNavigate,
+  onNavigateToStaffAdd,
+  onSelectSaleReceipt,
   sales = [],
   tanks = [],
   customers = [],
@@ -163,10 +177,29 @@ export const Header: React.FC<HeaderProps> = ({
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifFilter, setNotifFilter] = useState<'all' | 'sales' | 'fuel' | 'finance'>('all');
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
+  const [isSearchDropdownOpen, setIsSearchDropdownOpen] = useState(false);
+  const [mobileSearchModalOpen, setMobileSearchModalOpen] = useState(false);
+  const [isLocalDev, setIsLocalDev] = useState(false);
 
-  const userRef  = useRef<HTMLDivElement>(null);
-  const netRef   = useRef<HTMLDivElement>(null);
-  const notifRef = useRef<HTMLDivElement>(null);
+  const userRef   = useRef<HTMLDivElement>(null);
+  const netRef    = useRef<HTMLDivElement>(null);
+  const notifRef  = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLDivElement>(null);
+  const mobileInputRef = useRef<HTMLInputElement>(null);
+
+  // Check if we are running on localhost / engineer machine
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const isLocal =
+        window.location.hostname === 'localhost' ||
+        window.location.hostname === '127.0.0.1' ||
+        window.location.hostname.endsWith('.local') ||
+        window.location.search.includes('dev=true') ||
+        window.location.search.includes('developer=true') ||
+        localStorage.getItem('gasflow_dev_unlocked') === 'true';
+      setIsLocalDev(isLocal);
+    }
+  }, []);
 
   useEffect(() => {
     const update = () => {
@@ -181,10 +214,18 @@ export const Header: React.FC<HeaderProps> = ({
       if (userRef.current  && !userRef.current.contains(e.target as Node))  setUserDropdownOpen(false);
       if (netRef.current   && !netRef.current.contains(e.target as Node))   setNetworkDropdownOpen(false);
       if (notifRef.current && !notifRef.current.contains(e.target as Node)) setNotifOpen(false);
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) setIsSearchDropdownOpen(false);
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
+
+  // Focus mobile input when mobile modal opens
+  useEffect(() => {
+    if (mobileSearchModalOpen) {
+      setTimeout(() => mobileInputRef.current?.focus(), 100);
+    }
+  }, [mobileSearchModalOpen]);
 
   // ── Build 100% dynamic notifications from real live system data ──────────
   const notifications = useMemo<NotificationItem[]>(() => {
@@ -349,7 +390,7 @@ export const Header: React.FC<HeaderProps> = ({
         iconName: 'ShieldAlert',
         iconColor: '#475569',
         iconBg: '#F1F5F9',
-        title: language === 'so' ? 'Xeerka Amniga & Dhaqdhaqaaqa' : 'Audit Trail Event',
+        title: language === 'so' ? 'Ficil Nidaam / Amni' : 'System Security Event',
         message: `${log.userName}: ${log.action} — ${log.details}`,
         time: timeAgo(log.createdAt, language),
         roles: ['admin'],
@@ -358,93 +399,359 @@ export const Header: React.FC<HeaderProps> = ({
       });
     });
 
-    // Sort: unread first, then newest
-    return items.sort((a, b) => {
-      if (a.unread !== b.unread) return a.unread ? -1 : 1;
-      return b.timestamp - a.timestamp;
-    });
+    return items.sort((a, b) => b.timestamp - a.timestamp);
   }, [sales, tanks, customers, expenses, deliveries, auditLogs, developerGraceWarning, language]);
 
-  const networkConfig = {
-    cloud_online: { color: '#10B981', label: 'Cloud Online', Icon: Wifi,    bg: '#ECFDF5', border: '#D1FAE5' },
-    lan_only:     { color: '#F59E0B', label: 'LAN Network',  Icon: Radio,   bg: '#FFFBEB', border: '#FEF3C7' },
-    offline_pwa:  { color: '#EF4444', label: 'Offline Mode', Icon: WifiOff, bg: '#FEF2F2', border: '#FEE2E2' }
-  };
+  // Filter notifications by role & tab
+  const roleNotifications = useMemo(() => {
+    return notifications.filter(n => n.roles.includes(currentUser.role));
+  }, [notifications, currentUser.role]);
 
-  const net       = networkConfig[networkMode];
-  const roleStyle = ROLE_STYLES[currentUser.role] || ROLE_STYLES.cashier;
-  const initials  = currentUser.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+  const filteredNotifications = useMemo(() => {
+    if (notifFilter === 'all') return roleNotifications;
+    return roleNotifications.filter(n => n.category === notifFilter);
+  }, [roleNotifications, notifFilter]);
 
-  // Role filtered notifications
-  const roleNotifications = notifications.filter(n => n.roles.includes(currentUser.role));
-  const filteredNotifications = notifFilter === 'all'
-    ? roleNotifications
-    : roleNotifications.filter(n => n.category === notifFilter);
-
-  const unreadCount = roleNotifications.filter(n => n.unread && !readIds.has(n.id)).length;
+  const unreadCount = useMemo(() => {
+    return roleNotifications.filter(n => n.unread && !readIds.has(n.id)).length;
+  }, [roleNotifications, readIds]);
 
   const markAllRead = () => {
     setReadIds(new Set(roleNotifications.map(n => n.id)));
   };
 
   const markRead = (id: string) => {
-    setReadIds(prev => new Set([...prev, id]));
+    setReadIds(prev => new Set(prev).add(id));
   };
+
+  // ── Universal Live Search Engine ──────────────────────────────────────────
+  const searchResults = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return null;
+
+    // 1. Navigation Pages
+    const pages = [
+      { id: 'dashboard', title: language === 'so' ? 'Guud ahaan (Dashboard)' : 'Dashboard', subtitle: language === 'so' ? 'Muraayadda Kormeerka Kaalinta' : 'Station Overview', icon: Database, view: 'dashboard' },
+      { id: 'sales',     title: language === 'so' ? 'Iibka Shidaalka (POS)' : 'Sales POS', subtitle: language === 'so' ? 'Dhuumaha & Rasiidhada' : 'Pump Sales & Receipts', icon: Fuel, view: 'sales' },
+      { id: 'tanks',     title: language === 'so' ? 'Haamaha Shidaalka' : 'Tanks Telemetry', subtitle: language === 'so' ? 'Heerka Haamaha & Booyadaha' : 'Fuel Stock & Deliveries', icon: Layers, view: 'tanks' },
+      { id: 'inventory', title: language === 'so' ? 'Bakhaarka & Keenista' : 'Inventory Ledger', subtitle: language === 'so' ? 'Diiwaanka Dhaqdhaqaaqa Litirrada' : 'Stock Movements', icon: Package, view: 'inventory' },
+      { id: 'customers', title: language === 'so' ? 'Macaamiisha & Deynta' : 'Customers & Credit', subtitle: language === 'so' ? 'Gaadiidka Shirkadaha & Xadka Deynta' : 'Credit Limits & Debtors', icon: Users, view: 'customers' },
+      { id: 'finance',   title: language === 'so' ? 'Maaliyadda & Kharashka' : 'Finance & Expenses', subtitle: language === 'so' ? 'Dakhliga, Kharashka & Qasnadda' : 'Cash Flow & Ledger', icon: Wallet, view: 'finance' },
+      { id: 'reports',   title: language === 'so' ? 'Warbixinno & Xisaab-xir' : 'Reports & Reconciliation', subtitle: language === 'so' ? 'Soo Saaris CSV & Daabacaad' : 'Exports & Audits', icon: BarChart3, view: 'reports' },
+      { id: 'staff',     title: language === 'so' ? 'Shaqaalaha & Xeerarka' : 'Staff & Roles (RBAC)', subtitle: language === 'so' ? 'Akoonnada, Awoodaha & PIN-yada' : 'Security Permissions', icon: ShieldAlert, view: 'staff' },
+      { id: 'sync',      title: language === 'so' ? 'Mashiinka Sync-ga' : 'Sync Engine', subtitle: language === 'so' ? 'LAN, IndexedDB & Cloud Sync' : 'Offline Telemetry', icon: RefreshCw, view: 'sync' },
+      { id: 'settings',  title: language === 'so' ? 'Dejinta Kaalinta' : 'Station Settings', subtitle: language === 'so' ? 'Magaca, Laanta & Kaydka' : 'Config & Backups', icon: Settings, view: 'settings' },
+    ].filter(p => p.title.toLowerCase().includes(q) || p.subtitle.toLowerCase().includes(q) || p.id.includes(q));
+
+    // 2. Tanks
+    const matchedTanks = tanks.filter(t =>
+      t.name.toLowerCase().includes(q) ||
+      t.tankNumber.toLowerCase().includes(q) ||
+      t.fuelType.toLowerCase().includes(q)
+    ).slice(0, 4);
+
+    // 3. Customers
+    const matchedCustomers = customers.filter(c =>
+      c.name.toLowerCase().includes(q) ||
+      c.phone.toLowerCase().includes(q)
+    ).slice(0, 4);
+
+    // 4. Sales
+    const matchedSales = sales.filter(s =>
+      s.saleNumber.toLowerCase().includes(q) ||
+      (s.cashierName && s.cashierName.toLowerCase().includes(q)) ||
+      s.fuelType.toLowerCase().includes(q) ||
+      s.paymentMethod.toLowerCase().includes(q)
+    ).slice(0, 4);
+
+    // 5. Staff
+    const matchedUsers = users.filter(u =>
+      u.name.toLowerCase().includes(q) ||
+      u.role.toLowerCase().includes(q) ||
+      (u.email && u.email.toLowerCase().includes(q))
+    ).slice(0, 3);
+
+    const totalCount = pages.length + matchedTanks.length + matchedCustomers.length + matchedSales.length + matchedUsers.length;
+
+    return {
+      pages,
+      tanks: matchedTanks,
+      customers: matchedCustomers,
+      sales: matchedSales,
+      users: matchedUsers,
+      totalCount
+    };
+  }, [searchQuery, tanks, customers, sales, users, language]);
+
+  const handleSelectSearchResult = (view?: string, action?: () => void) => {
+    setIsSearchDropdownOpen(false);
+    setMobileSearchModalOpen(false);
+    onSearchChange('');
+    if (action) {
+      action();
+    } else if (view && onNavigate) {
+      onNavigate(view);
+    }
+  };
+
+  const networkConfig: Record<NetworkMode, { label: string; Icon: typeof Wifi; color: string; bg: string; border: string }> = {
+    cloud_online: {
+      label: 'Cloud Online',
+      Icon: Wifi,
+      color: '#059669',
+      bg: '#ECFDF5',
+      border: '#D1FAE5'
+    },
+    lan_only: {
+      label: 'LAN Server',
+      Icon: Radio,
+      color: '#D97706',
+      bg: '#FFFBEB',
+      border: '#FEF3C7'
+    },
+    offline_pwa: {
+      label: 'Offline (IndexedDB)',
+      Icon: WifiOff,
+      color: '#DC2626',
+      bg: '#FEF2F2',
+      border: '#FEE2E2'
+    }
+  };
+
+  const net = networkConfig[networkMode];
+  const roleStyle = ROLE_STYLES[currentUser.role] || ROLE_STYLES.cashier;
+  const initials = currentUser.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
 
   return (
     <>
-      <header className="h-[62px] px-2.5 sm:px-6 flex items-center justify-between sticky top-0 z-30 shrink-0 bg-white/95 backdrop-blur-md border-b border-[#ECEEF2] w-full max-w-full">
-      {/* Left side */}
-      <div className="flex items-center gap-1.5 sm:gap-3 min-w-0 flex-1 max-w-sm sm:max-w-md md:max-w-xl">
-        {/* Mobile Hamburger */}
+    <header className="h-14 sm:h-16 bg-white/95 backdrop-blur-md border-b border-[#ECEEF2] px-2.5 sm:px-4 lg:px-6 flex items-center justify-between sticky top-0 z-30 transition-all">
+      {/* ── Left Side: Hamburger & Brand (Clean on mobile, no crowding) ── */}
+      <div className="flex items-center gap-2 sm:gap-3 shrink-0">
         <button
           onClick={onToggleMobileMenu}
-          className="lg:hidden p-1.5 sm:p-2 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
+          className="lg:hidden p-1.5 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
           aria-label="Open Navigation"
         >
           <Menu className="w-5 h-5" />
         </button>
 
-        {/* Mobile Brand */}
-        <div className="lg:hidden shrink-0">
+        {/* Mobile & Tablet Brand (Always rendered with rich high-contrast logo) */}
+        <div className="shrink-0">
           <GasFlowLogo size="xs" variant="compact" />
         </div>
+      </div>
 
-        {/* Search Bar */}
-        <div className="relative flex items-center flex-1 min-w-0">
+      {/* ── Center: Search Bar (Desktop: full bar with auto-complete; Mobile: hidden here, opened via button) ── */}
+      <div className="hidden md:flex flex-1 max-w-md mx-4 relative" ref={searchRef}>
+        <div className="relative flex items-center w-full">
           <div className="absolute left-3 flex items-center pointer-events-none text-slate-400">
-            <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400" />
+            <Search className="w-4 h-4 text-slate-400" />
           </div>
           <input
             type="text"
             value={searchQuery}
-            onChange={e => onSearchChange(e.target.value)}
-            placeholder={language === 'so' ? 'Raadi wax kasta...' : 'Search for something...'}
-            style={{ paddingLeft: '32px', paddingRight: searchQuery ? '28px' : '10px' }}
-            className="w-full h-8.5 sm:h-9 bg-[#F8F9FA] hover:bg-[#F2F4F7] focus:bg-white text-slate-900 placeholder:text-slate-400 text-xs sm:text-[13px] font-medium rounded-xl border border-[#ECEEF2] focus:border-blue-500 focus:outline-none transition-all shadow-2xs truncate"
+            onFocus={() => setIsSearchDropdownOpen(true)}
+            onChange={e => {
+              onSearchChange(e.target.value);
+              setIsSearchDropdownOpen(true);
+            }}
+            placeholder={language === 'so' ? 'Raadi wax kasta (Iib, Haamo, Macaamiil, Shaqaale...)' : 'Search anything (Sales, Tanks, Customers...)'}
+            style={{ paddingLeft: '34px', paddingRight: searchQuery ? '32px' : '12px' }}
+            className="w-full h-9 bg-[#F8F9FA] hover:bg-[#F2F4F7] focus:bg-white text-slate-900 placeholder:text-slate-400 text-xs sm:text-[13px] font-medium rounded-xl border border-[#ECEEF2] focus:border-blue-500 focus:outline-none transition-all shadow-2xs"
           />
           {searchQuery && (
             <button
               onClick={() => onSearchChange('')}
-              className="absolute right-2 p-1 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-200/60 transition-colors cursor-pointer"
+              className="absolute right-2.5 p-1 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-200/60 transition-colors cursor-pointer"
               aria-label="Clear search"
             >
               <X className="w-3.5 h-3.5" />
             </button>
           )}
         </div>
+
+        {/* Desktop Live Autocomplete Dropdown */}
+        {isSearchDropdownOpen && searchResults && (
+          <div className="absolute left-0 right-0 top-full mt-2 bg-white rounded-2xl border border-[#ECEEF2] shadow-2xl overflow-hidden z-50 max-h-[460px] overflow-y-auto divide-y divide-slate-100 animate-in fade-in zoom-in-95 duration-150">
+            {searchResults.totalCount === 0 ? (
+              <div className="p-6 text-center text-xs text-slate-400">
+                {language === 'so' ? 'Wax xog ah lagama helin raadintaada' : 'No results found matching your query'}
+              </div>
+            ) : (
+              <>
+                {/* 1. Pages Navigation */}
+                {searchResults.pages.length > 0 && (
+                  <div className="p-2">
+                    <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                      {language === 'so' ? 'Qaybaha Nidaamka' : 'System Pages'}
+                    </div>
+                    {searchResults.pages.map(p => {
+                      const Icon = p.icon;
+                      return (
+                        <button
+                          key={p.id}
+                          onClick={() => handleSelectSearchResult(p.view)}
+                          className="w-full text-left px-2.5 py-2 rounded-xl hover:bg-blue-50/70 flex items-center gap-2.5 transition-colors cursor-pointer group"
+                        >
+                          <div className="w-7 h-7 rounded-lg bg-blue-100/70 text-blue-600 flex items-center justify-center shrink-0">
+                            <Icon className="w-3.5 h-3.5" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-[12px] font-bold text-slate-900 group-hover:text-blue-700 truncate">{p.title}</div>
+                            <div className="text-[10px] text-slate-400 truncate">{p.subtitle}</div>
+                          </div>
+                          <ArrowRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-blue-600 shrink-0" />
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* 2. Fuel Tanks */}
+                {searchResults.tanks.length > 0 && (
+                  <div className="p-2">
+                    <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                      {language === 'so' ? 'Haamaha Shidaalka' : 'Fuel Tanks'}
+                    </div>
+                    {searchResults.tanks.map(t => {
+                      const pct = Math.round((t.currentLevel / t.capacity) * 100);
+                      return (
+                        <button
+                          key={t.id}
+                          onClick={() => handleSelectSearchResult('tanks')}
+                          className="w-full text-left px-2.5 py-2 rounded-xl hover:bg-emerald-50/70 flex items-center gap-2.5 transition-colors cursor-pointer group"
+                        >
+                          <div className="w-7 h-7 rounded-lg bg-emerald-100/70 text-emerald-600 flex items-center justify-center shrink-0">
+                            <Database className="w-3.5 h-3.5" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-[12px] font-bold text-slate-900 group-hover:text-emerald-700 truncate">
+                              {t.name} ({t.tankNumber}) — {t.fuelType}
+                            </div>
+                            <div className="text-[10px] text-slate-500">
+                              {t.currentLevel.toLocaleString()} L / {t.capacity.toLocaleString()} L ({pct}%)
+                            </div>
+                          </div>
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${pct < 25 ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                            {pct}%
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* 3. Customers */}
+                {searchResults.customers.length > 0 && (
+                  <div className="p-2">
+                    <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                      {language === 'so' ? 'Macaamiisha & Deynta' : 'Customers'}
+                    </div>
+                    {searchResults.customers.map(c => (
+                      <button
+                        key={c.id}
+                        onClick={() => handleSelectSearchResult('customers')}
+                        className="w-full text-left px-2.5 py-2 rounded-xl hover:bg-amber-50/70 flex items-center gap-2.5 transition-colors cursor-pointer group"
+                      >
+                        <div className="w-7 h-7 rounded-lg bg-amber-100/70 text-amber-600 flex items-center justify-center shrink-0">
+                          <Users className="w-3.5 h-3.5" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[12px] font-bold text-slate-900 group-hover:text-amber-800 truncate">{c.name}</div>
+                          <div className="text-[10px] text-slate-500">{c.phone}</div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-[11px] font-bold text-slate-900">${c.currentBalance.toFixed(2)}</div>
+                          <div className="text-[9px] text-slate-400">{language === 'so' ? 'Deyn' : 'Balance'}</div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* 4. Sales */}
+                {searchResults.sales.length > 0 && (
+                  <div className="p-2">
+                    <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                      {language === 'so' ? 'Iibkii ugu dambeeyay' : 'Recent Sales'}
+                    </div>
+                    {searchResults.sales.map(s => (
+                      <button
+                        key={s.id}
+                        onClick={() => handleSelectSearchResult('sales', () => onSelectSaleReceipt?.(s))}
+                        className="w-full text-left px-2.5 py-2 rounded-xl hover:bg-blue-50/70 flex items-center gap-2.5 transition-colors cursor-pointer group"
+                      >
+                        <div className="w-7 h-7 rounded-lg bg-blue-100/70 text-blue-600 flex items-center justify-center shrink-0">
+                          <Receipt className="w-3.5 h-3.5" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[12px] font-bold text-slate-900 truncate">
+                            {s.saleNumber} — {s.fuelType} ({s.litres.toFixed(1)} L)
+                          </div>
+                          <div className="text-[10px] text-slate-500">
+                            {s.paymentMethod.toUpperCase()} • Shuboole: {s.cashierName || 'POS'}
+                          </div>
+                        </div>
+                        <span className="text-[12px] font-black text-emerald-600">
+                          ${s.totalAmount.toFixed(2)}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* 5. Staff */}
+                {searchResults.users.length > 0 && (
+                  <div className="p-2">
+                    <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                      {language === 'so' ? 'Shaqaalaha' : 'Staff'}
+                    </div>
+                    {searchResults.users.map(u => (
+                      <button
+                        key={u.id}
+                        onClick={() => handleSelectSearchResult('staff')}
+                        className="w-full text-left px-2.5 py-2 rounded-xl hover:bg-purple-50/70 flex items-center gap-2.5 transition-colors cursor-pointer group"
+                      >
+                        <div className="w-7 h-7 rounded-lg bg-purple-100/70 text-purple-600 flex items-center justify-center shrink-0">
+                          <ShieldAlert className="w-3.5 h-3.5" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[12px] font-bold text-slate-900 group-hover:text-purple-800 truncate">{u.name}</div>
+                          <div className="text-[10px] text-slate-500">{u.email}</div>
+                        </div>
+                        <span className="text-[9px] font-bold uppercase px-2 py-0.5 rounded-md bg-purple-50 text-purple-700">
+                          {u.role}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Right controls */}
-      <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 pl-1.5">
-        {/* Date Display */}
+      {/* ── Right Side Controls (Mobile & Desktop Clean spacing) ── */}
+      <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+        {/* Mobile Search Trigger Icon Button (Eliminates the crushed input on mobile) */}
+        <button
+          onClick={() => setMobileSearchModalOpen(true)}
+          className="md:hidden w-8 h-8 rounded-xl flex items-center justify-center bg-white hover:bg-slate-50 border border-[#ECEEF2] text-slate-600 shadow-2xs transition-colors cursor-pointer"
+          aria-label="Search"
+          title="Raadi wax kasta"
+        >
+          <Search className="w-3.5 h-3.5 text-slate-500" />
+        </button>
+
+        {/* Date Display (Desktop only) */}
         <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-white border border-[#ECEEF2] rounded-xl text-xs font-medium text-slate-600 shadow-2xs">
           <Calendar className="w-3.5 h-3.5 text-slate-400" />
           <span>{currentDate}</span>
         </div>
 
         {/* Network Mode */}
-        <div className="relative" ref={netRef}>
+        <div className="relative shrink-0" ref={netRef}>
           <button
             onClick={() => setNetworkDropdownOpen(!networkDropdownOpen)}
             className="flex items-center gap-1 sm:gap-1.5 p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl text-[11px] sm:text-[11.5px] font-semibold transition-all cursor-pointer border shadow-2xs"
@@ -458,7 +765,6 @@ export const Header: React.FC<HeaderProps> = ({
 
           {networkDropdownOpen && (
             <>
-              {/* Mobile overlay backdrop */}
               <div
                 className="fixed inset-0 z-40 bg-slate-900/25 backdrop-blur-[1px] sm:hidden"
                 onClick={() => setNetworkDropdownOpen(false)}
@@ -482,7 +788,7 @@ export const Header: React.FC<HeaderProps> = ({
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="text-[12px] font-semibold text-slate-900 leading-snug">
-                          {mode === 'cloud_online' ? (language === 'so' ? '1. Cloud & Internet Online' : '1. Cloud & Internet Online') :
+                          {mode === 'cloud_online' ? '1. Cloud & Internet Online' :
                            mode === 'lan_only'      ? (language === 'so' ? '2. Local LAN Only (Xarunta)' : '2. Local LAN Only (Offline cloud)') :
                                                       (language === 'so' ? '3. IndexedDB Offline Cache' : '3. IndexedDB Offline Cache')}
                         </div>
@@ -503,15 +809,15 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Language Toggle */}
         <button
           onClick={() => onLanguageChange(language === 'en' ? 'so' : 'en')}
-          className="flex items-center gap-1 p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl text-[11px] sm:text-[11.5px] font-bold transition-all bg-white hover:bg-slate-50 border border-[#ECEEF2] text-slate-700 shadow-2xs cursor-pointer"
+          className="flex items-center gap-1 p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl text-[11px] sm:text-[11.5px] font-bold transition-all bg-white hover:bg-slate-50 border border-[#ECEEF2] text-slate-700 shadow-2xs cursor-pointer shrink-0"
           title="Change language / Beddel luuqadda"
         >
           <Globe className="w-3.5 h-3.5 text-slate-400 shrink-0" />
           <span>{language.toUpperCase()}</span>
         </button>
 
-        {/* Notifications Bell — powered by REAL data */}
-        <div className="relative" ref={notifRef}>
+        {/* Notifications Bell — powered by REAL live data */}
+        <div className="relative shrink-0" ref={notifRef}>
           <button
             onClick={() => setNotifOpen(!notifOpen)}
             className="w-8 h-8 rounded-xl flex items-center justify-center relative transition-all bg-white hover:bg-slate-50 border border-[#ECEEF2] text-slate-600 shadow-2xs cursor-pointer"
@@ -527,129 +833,126 @@ export const Header: React.FC<HeaderProps> = ({
 
           {notifOpen && (
             <>
-              {/* Mobile overlay backdrop */}
               <div
                 className="fixed inset-0 z-40 bg-slate-900/25 backdrop-blur-[1px] sm:hidden"
                 onClick={() => setNotifOpen(false)}
               />
               <div
                 className="fixed inset-x-2.5 top-14 sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 rounded-2xl p-0 z-50 bg-white border border-[#ECEEF2] shadow-2xl overflow-hidden w-auto sm:w-[380px] sm:min-w-[360px]"
-                style={{
-                  animation: 'scaleIn 0.18s cubic-bezier(0.16,1,0.3,1)'
-                }}
+                style={{ animation: 'scaleIn 0.18s cubic-bezier(0.16,1,0.3,1)' }}
               >
-              {/* Header */}
-              <div className="p-3.5 border-b border-[#ECEEF2] flex items-center justify-between bg-slate-50/70">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-slate-900">
-                      {language === 'so' ? 'Ogeysiisyada Saldhigga' : 'Station Notifications'}
-                    </span>
-                    {unreadCount > 0 && (
-                      <span className="px-1.5 py-0.5 rounded-md bg-rose-100 text-rose-700 text-[10px] font-black">
-                        {unreadCount} {language === 'so' ? 'cusub' : 'new'}
+                {/* Header */}
+                <div className="p-3.5 border-b border-[#ECEEF2] flex items-center justify-between bg-slate-50/70">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-slate-900">
+                        {language === 'so' ? 'Ogeysiisyada Kaalinta' : 'Station Notifications'}
                       </span>
-                    )}
+                      {unreadCount > 0 && (
+                        <span className="px-1.5 py-0.5 rounded-md bg-rose-100 text-rose-700 text-[10px] font-black">
+                          {unreadCount} {language === 'so' ? 'cusub' : 'new'}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[10px] text-slate-400 mt-0.5">
+                      {language === 'so' ? `Xogta u gaarka ah: ${roleStyle.labelSo}` : `Filtered for: ${roleStyle.label}`}
+                    </p>
                   </div>
-                  <p className="text-[10px] text-slate-400 mt-0.5">
-                    {language === 'so' ? `Xogta u gaarka ah: ${roleStyle.labelSo}` : `Filtered for: ${roleStyle.label}`}
-                  </p>
+                  {unreadCount > 0 && (
+                    <button
+                      onClick={markAllRead}
+                      className="text-[11px] font-bold text-blue-600 hover:text-blue-700 transition-colors cursor-pointer"
+                    >
+                      {language === 'so' ? 'Akhriso dhammaan' : 'Mark all read'}
+                    </button>
+                  )}
                 </div>
-                {unreadCount > 0 && (
-                  <button
-                    onClick={markAllRead}
-                    className="text-[11px] font-bold text-blue-600 hover:text-blue-700 transition-colors cursor-pointer"
-                  >
-                    {language === 'so' ? 'Akhriso dhammaan' : 'Mark all read'}
-                  </button>
-                )}
-              </div>
 
-              {/* Category Tabs */}
-              <div className="flex border-b border-[#ECEEF2] px-2 py-1.5 bg-white text-[11px] font-semibold gap-1 overflow-x-auto">
-                {[
-                  { id: 'all',     label: language === 'so' ? 'Dhammaan' : 'All'     },
-                  { id: 'sales',   label: language === 'so' ? 'Iibka'    : 'Sales'   },
-                  { id: 'fuel',    label: language === 'so' ? 'Haamaha'  : 'Fuel'    },
-                  { id: 'finance', label: language === 'so' ? 'Deymaha'  : 'Finance' }
-                ].map(tab => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setNotifFilter(tab.id as typeof notifFilter)}
-                    className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer whitespace-nowrap ${
-                      notifFilter === tab.id
-                        ? 'bg-blue-50 text-blue-600 font-bold'
-                        : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
-                    }`}
-                  >
-                    {tab.label}
-                    {tab.id !== 'all' && roleNotifications.filter(n => n.category === tab.id && n.unread && !readIds.has(n.id)).length > 0 && (
-                      <span className="ml-1 w-1.5 h-1.5 rounded-full bg-rose-500 inline-block" />
-                    )}
-                  </button>
-                ))}
-              </div>
+                {/* Category Tabs */}
+                <div className="flex border-b border-[#ECEEF2] px-2 py-1.5 bg-white text-[11px] font-semibold gap-1 overflow-x-auto">
+                  {[
+                    { id: 'all',     label: language === 'so' ? 'Dhammaan' : 'All'     },
+                    { id: 'sales',   label: language === 'so' ? 'Iibka'    : 'Sales'   },
+                    { id: 'fuel',    label: language === 'so' ? 'Haamaha'  : 'Fuel'    },
+                    { id: 'finance', label: language === 'so' ? 'Deymaha'  : 'Finance' }
+                  ].map(tab => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setNotifFilter(tab.id as typeof notifFilter)}
+                      className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer whitespace-nowrap ${
+                        notifFilter === tab.id
+                          ? 'bg-blue-50 text-blue-600 font-bold'
+                          : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
+                      }`}
+                    >
+                      {tab.label}
+                      {tab.id !== 'all' && roleNotifications.filter(n => n.category === tab.id && n.unread && !readIds.has(n.id)).length > 0 && (
+                        <span className="ml-1 w-1.5 h-1.5 rounded-full bg-rose-500 inline-block" />
+                      )}
+                    </button>
+                  ))}
+                </div>
 
-              {/* Notification Items */}
-              <div className="max-h-72 overflow-y-auto divide-y divide-[#F1F3F6]">
-                {filteredNotifications.length === 0 ? (
-                  <div className="py-8 text-center text-slate-400 text-xs">
-                    {language === 'so' ? 'Ma jiraan ogeysiisyadan xilligan' : 'No notifications in this category'}
-                  </div>
-                ) : (
-                  filteredNotifications.map(notif => {
-                    const Icon = getNotifIcon(notif.iconName);
-                    const isRead = readIds.has(notif.id);
-                    return (
-                      <div
-                        key={notif.id}
-                        onClick={() => markRead(notif.id)}
-                        className={`p-3 flex items-start gap-2.5 hover:bg-slate-50/80 transition-colors cursor-pointer ${
-                          notif.unread && !isRead ? 'bg-blue-50/30' : ''
-                        }`}
-                      >
+                {/* Notification Items */}
+                <div className="max-h-72 overflow-y-auto divide-y divide-[#F1F3F6]">
+                  {filteredNotifications.length === 0 ? (
+                    <div className="py-8 text-center text-slate-400 text-xs">
+                      {language === 'so' ? 'Ma jiraan ogeysiisyadan xilligan' : 'No notifications in this category'}
+                    </div>
+                  ) : (
+                    filteredNotifications.map(notif => {
+                      const Icon = getNotifIcon(notif.iconName);
+                      const isRead = readIds.has(notif.id);
+                      return (
                         <div
-                          className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
-                          style={{ background: notif.iconBg }}
+                          key={notif.id}
+                          onClick={() => markRead(notif.id)}
+                          className={`p-3 flex items-start gap-2.5 hover:bg-slate-50/80 transition-colors cursor-pointer ${
+                            notif.unread && !isRead ? 'bg-blue-50/30' : ''
+                          }`}
                         >
-                          <Icon className="w-3.5 h-3.5" style={{ color: notif.iconColor }} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="text-[12px] font-bold text-slate-900 leading-tight truncate">
-                              {notif.title}
-                            </span>
-                            <span className="text-[10px] text-slate-400 whitespace-nowrap shrink-0">
-                              {notif.time}
-                            </span>
+                          <div
+                            className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
+                            style={{ background: notif.iconBg }}
+                          >
+                            <Icon className="w-3.5 h-3.5" style={{ color: notif.iconColor }} />
                           </div>
-                          <p className="text-[11px] text-slate-500 mt-0.5 leading-snug line-clamp-2">
-                            {notif.message}
-                          </p>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-[12px] font-bold text-slate-900 leading-tight truncate">
+                                {notif.title}
+                              </span>
+                              <span className="text-[10px] text-slate-400 whitespace-nowrap shrink-0">
+                                {notif.time}
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-slate-500 mt-0.5 leading-snug line-clamp-2">
+                              {notif.message}
+                            </p>
+                          </div>
+                          {notif.unread && !isRead && (
+                            <span className="w-2 h-2 rounded-full bg-blue-600 shrink-0 mt-1.5" />
+                          )}
                         </div>
-                        {notif.unread && !isRead && (
-                          <span className="w-2 h-2 rounded-full bg-blue-600 shrink-0 mt-1.5" />
-                        )}
-                      </div>
-                    );
-                  })
-                )}
-              </div>
+                      );
+                    })
+                  )}
+                </div>
 
-              {/* Footer */}
-              <div className="p-2.5 border-t border-[#ECEEF2] bg-slate-50/50 text-center">
-                <span className="text-[10px] text-slate-400">
-                  {language === 'so'
-                    ? `${roleNotifications.length} ogeysiis oo ku salaysan xogta nidaamka`
-                    : `${roleNotifications.length} notifications from live system data`}
-                </span>
+                {/* Footer */}
+                <div className="p-2.5 border-t border-[#ECEEF2] bg-slate-50/50 text-center">
+                  <span className="text-[10px] text-slate-400">
+                    {language === 'so'
+                      ? `${roleNotifications.length} ogeysiis oo ku salaysan xogta dhabta ah ee kaalinta`
+                      : `${roleNotifications.length} notifications from live station telemetry`}
+                  </span>
+                </div>
               </div>
-            </div>
             </>
           )}
         </div>
 
-        {/* User Profile */}
+        {/* User Profile Dropdown */}
         <div className="relative shrink-0" ref={userRef}>
           <button
             onClick={() => setUserDropdownOpen(!userDropdownOpen)}
@@ -672,7 +975,6 @@ export const Header: React.FC<HeaderProps> = ({
 
           {userDropdownOpen && (
             <>
-              {/* Mobile overlay backdrop */}
               <div
                 className="fixed inset-0 z-40 bg-slate-900/25 backdrop-blur-[1px] sm:hidden"
                 onClick={() => setUserDropdownOpen(false)}
@@ -681,106 +983,115 @@ export const Header: React.FC<HeaderProps> = ({
                 className="fixed inset-x-2.5 top-14 sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 w-auto sm:w-80 rounded-2xl p-2 z-50 modal-content bg-white border border-[#ECEEF2] shadow-2xl max-w-[calc(100vw-20px)] sm:max-w-none"
                 style={{ animation: 'scaleIn 0.18s cubic-bezier(0.16,1,0.3,1)' }}
               >
-              {/* Current User Info */}
-              <div className="px-3.5 py-3 mb-2 rounded-xl border border-[#ECEEF2]" style={{ background: roleStyle.bg }}>
-                <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-xl text-white flex items-center justify-center font-black text-xs shrink-0" style={{ background: roleStyle.text }}>
-                    {initials}
+                {/* Current User Info */}
+                <div className="px-3.5 py-3 mb-2 rounded-xl border border-[#ECEEF2]" style={{ background: roleStyle.bg }}>
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-xl text-white flex items-center justify-center font-black text-xs shrink-0" style={{ background: roleStyle.text }}>
+                      {initials}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[13px] font-bold text-slate-900 truncate">{currentUser.name}</div>
+                      <div className="text-[11px] text-slate-500 truncate">{currentUser.email}</div>
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-[13px] font-bold text-slate-900 truncate">{currentUser.name}</div>
-                    <div className="text-[11px] text-slate-500 truncate">{currentUser.email}</div>
-                  </div>
-                </div>
-                <div className="mt-2.5 flex items-center justify-between">
-                  <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full border tracking-wide" style={{ background: '#FFFFFF', color: roleStyle.text, borderColor: `${roleStyle.text}40` }}>
-                    {language === 'so' ? roleStyle.labelSo : roleStyle.label}
-                  </span>
-                  <span className="text-[10px] text-slate-400 font-medium">{roleStyle.descSo}</span>
-                </div>
-              </div>
-
-              {/* Staff List for managers/admins */}
-              {(currentUser.role === 'admin' || currentUser.role === 'manager') && (
-                <div className="mb-2 p-2 rounded-xl bg-slate-50/80 border border-slate-200/80 space-y-1.5">
-                  <div className="flex items-center justify-between px-1">
-                    <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider flex items-center gap-1">
-                      <Users className="w-3 h-3" />
-                      <span>{language === 'so' ? `Shaqaalaha (${users.length})` : `Staff (${users.length})`}</span>
+                  <div className="mt-2.5 flex items-center justify-between">
+                    <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full border tracking-wide" style={{ background: '#FFFFFF', color: roleStyle.text, borderColor: `${roleStyle.text}40` }}>
+                      {language === 'so' ? roleStyle.labelSo : roleStyle.label}
                     </span>
-                    {onOpenAuthPortal && (
-                      <button
-                        onClick={() => { setUserDropdownOpen(false); onOpenAuthPortal(); }}
-                        className="text-[10px] font-bold text-blue-600 hover:text-blue-700 flex items-center gap-0.5 cursor-pointer"
-                      >
-                        <Plus className="w-2.5 h-2.5" />
-                        <span>{language === 'so' ? 'Ku dar' : 'Add'}</span>
-                      </button>
-                    )}
+                    <span className="text-[10px] text-slate-400 font-medium">{roleStyle.descSo}</span>
                   </div>
-                  <div className="max-h-28 overflow-y-auto divide-y divide-slate-100">
-                    {users.slice(0, 4).map(u => {
-                      const uStyle = ROLE_STYLES[u.role] || ROLE_STYLES.cashier;
-                      return (
-                        <div key={u.id} className="py-1 px-1 flex items-center justify-between text-[11px]">
-                          <div className="flex items-center gap-1.5 min-w-0">
-                            <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: uStyle.text }} />
-                            <span className="font-semibold text-slate-800 truncate">{u.name}</span>
+                </div>
+
+                {/* Staff List for managers/admins — with direct "+ Ku dar" to Staff page */}
+                {(currentUser.role === 'admin' || currentUser.role === 'manager') && (
+                  <div className="mb-2 p-2 rounded-xl bg-slate-50/80 border border-slate-200/80 space-y-1.5">
+                    <div className="flex items-center justify-between px-1">
+                      <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider flex items-center gap-1">
+                        <Users className="w-3 h-3" />
+                        <span>{language === 'so' ? `Shaqaalaha (${users.length})` : `Staff (${users.length})`}</span>
+                      </span>
+                      {/* Clicking "+ Ku dar" navigates to Staff view and opens Add Staff form */}
+                      {onNavigateToStaffAdd && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setUserDropdownOpen(false);
+                            onNavigateToStaffAdd();
+                          }}
+                          className="text-[10px] font-bold text-blue-600 hover:text-blue-700 flex items-center gap-0.5 cursor-pointer hover:underline"
+                          title={language === 'so' ? 'Ku dar shaqaale cusub' : 'Add new staff member'}
+                        >
+                          <Plus className="w-2.5 h-2.5" />
+                          <span>{language === 'so' ? 'Ku dar' : 'Add'}</span>
+                        </button>
+                      )}
+                    </div>
+                    <div className="max-h-28 overflow-y-auto divide-y divide-slate-100">
+                      {users.slice(0, 4).map(u => {
+                        const uStyle = ROLE_STYLES[u.role] || ROLE_STYLES.cashier;
+                        return (
+                          <div key={u.id} className="py-1 px-1 flex items-center justify-between text-[11px]">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: uStyle.text }} />
+                              <span className="font-semibold text-slate-800 truncate">{u.name}</span>
+                            </div>
+                            <span className="text-[9px] font-bold uppercase px-1.5 py-0.2 rounded-md shrink-0" style={{ background: uStyle.bg, color: uStyle.text }}>
+                              {u.role}
+                            </span>
                           </div>
-                          <span className="text-[9px] font-bold uppercase px-1.5 py-0.2 rounded-md shrink-0" style={{ background: uStyle.bg, color: uStyle.text }}>
-                            {u.role}
-                          </span>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {onOpenProfileModal && (
-                <button
-                  onClick={() => { setUserDropdownOpen(false); onOpenProfileModal(); }}
-                  className="w-full text-left px-3 py-2 rounded-xl flex items-center justify-between text-[12px] font-bold text-slate-800 hover:bg-emerald-50 hover:text-emerald-800 transition-colors mb-1 border border-slate-200/80 cursor-pointer"
-                >
-                  <div className="flex items-center gap-2">
-                    <KeyRound className="w-4 h-4 text-emerald-600" />
-                    <span>{language === 'so' ? 'Akoonkayga & Amniga' : 'My Account & Security'}</span>
-                  </div>
-                  <span className="text-[10px] text-emerald-700 bg-emerald-100/70 px-2 py-0.5 rounded-md font-bold">PIN & 2FA</span>
-                </button>
-              )}
-
-              {(currentUser.role === 'admin') && onOpenDeveloperControl && (
-                <button
-                  type="button"
-                  onClick={() => { setUserDropdownOpen(false); onOpenDeveloperControl(); }}
-                  className="w-full text-left px-3 py-2 rounded-xl flex items-center justify-between text-[12px] font-bold text-slate-800 hover:bg-slate-100 transition-colors mb-1 border border-slate-200/80 cursor-pointer"
-                >
-                  <div className="flex items-center gap-2">
-                    <Terminal className="w-4 h-4 text-emerald-600" />
-                    <span>{language === 'so' ? 'Awoodda Engineer-ka (Master Dev)' : 'Developer Master Control'}</span>
-                  </div>
-                  <span className="text-[10px] text-emerald-800 bg-emerald-100/70 px-2 py-0.5 rounded-md font-bold">Lock/Unlock</span>
-                </button>
-              )}
-
-              {onLogout && (
-                <div className="mt-1 pt-1 border-t border-slate-100">
+                {onOpenProfileModal && (
                   <button
-                    onClick={() => { onLogout(); setUserDropdownOpen(false); }}
-                    className="w-full text-left px-3 py-2 rounded-xl flex items-center gap-2 text-[12px] font-bold text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                    onClick={() => { setUserDropdownOpen(false); onOpenProfileModal(); }}
+                    className="w-full text-left px-3 py-2 rounded-xl flex items-center justify-between text-[12px] font-bold text-slate-800 hover:bg-emerald-50 hover:text-emerald-800 transition-colors mb-1 border border-slate-200/80 cursor-pointer"
                   >
-                    <LogOut className="w-3.5 h-3.5 text-rose-500" />
-                    <span>{language === 'so' ? 'Ka Bax (Log Out)' : 'Log Out'}</span>
+                    <div className="flex items-center gap-2">
+                      <KeyRound className="w-4 h-4 text-emerald-600" />
+                      <span>{language === 'so' ? 'Akoonkayga & Amniga' : 'My Account & Security'}</span>
+                    </div>
+                    <span className="text-[10px] text-emerald-700 bg-emerald-100/70 px-2 py-0.5 rounded-md font-bold">PIN & 2FA</span>
                   </button>
-                </div>
-              )}
-            </div>
-          </>
-        )}
+                )}
+
+                {/* Developer Master Control: RESTRICTED TO LOCALHOST / DEVELOPER MACHINE ONLY */}
+                {isLocalDev && (currentUser.role === 'admin') && onOpenDeveloperControl && (
+                  <button
+                    type="button"
+                    onClick={() => { setUserDropdownOpen(false); onOpenDeveloperControl(); }}
+                    className="w-full text-left px-3 py-2 rounded-xl flex items-center justify-between text-[12px] font-bold text-slate-800 hover:bg-slate-100 transition-colors mb-1 border border-slate-200/80 cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Terminal className="w-4 h-4 text-emerald-600" />
+                      <span>{language === 'so' ? 'Awoodda Engineer-ka (Master Dev)' : 'Developer Master Control'}</span>
+                    </div>
+                    <span className="text-[10px] text-emerald-800 bg-emerald-100/70 px-2 py-0.5 rounded-md font-bold">Localhost</span>
+                  </button>
+                )}
+
+                {onLogout && (
+                  <div className="mt-1 pt-1 border-t border-slate-100">
+                    <button
+                      onClick={() => { onLogout(); setUserDropdownOpen(false); }}
+                      className="w-full text-left px-3 py-2 rounded-xl flex items-center gap-2 text-[12px] font-bold text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                    >
+                      <LogOut className="w-3.5 h-3.5 text-rose-500" />
+                      <span>{language === 'so' ? 'Ka Bax (Log Out)' : 'Log Out'}</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
         </div>
       </div>
     </header>
+
+    {/* Developer Grace Warning Bar (Only if active) */}
     {developerGraceWarning && (
       <div className="w-full bg-amber-500 text-white px-4 py-1.5 flex items-center justify-between text-xs font-bold shadow-xs shrink-0 z-20">
         <div className="flex items-center gap-2">
@@ -788,6 +1099,175 @@ export const Header: React.FC<HeaderProps> = ({
           <span>{developerGraceWarning}</span>
         </div>
         <span className="text-[10px] uppercase tracking-wider bg-white/20 px-2 py-0.5 rounded">Notice</span>
+      </div>
+    )}
+
+    {/* ── Mobile Search Full Modal Overlay ── */}
+    {mobileSearchModalOpen && (
+      <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex flex-col md:hidden p-3 animate-in fade-in duration-150">
+        <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[88vh]">
+          {/* Search Header */}
+          <div className="p-3.5 border-b border-slate-100 flex items-center gap-2.5">
+            <Search className="w-4 h-4 text-blue-600 shrink-0" />
+            <input
+              ref={mobileInputRef}
+              type="text"
+              value={searchQuery}
+              onChange={e => onSearchChange(e.target.value)}
+              placeholder={language === 'so' ? 'Raadi wax kasta (Iib, Haamo, Macaamiil...)' : 'Search anything...'}
+              className="flex-1 text-sm font-semibold text-slate-900 placeholder:text-slate-400 focus:outline-none bg-transparent"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => onSearchChange('')}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+            <button
+              onClick={() => setMobileSearchModalOpen(false)}
+              className="p-1.5 rounded-xl bg-slate-100 text-slate-600 text-xs font-bold px-2.5"
+            >
+              {language === 'so' ? 'Xir' : 'Close'}
+            </button>
+          </div>
+
+          {/* Search Results in Modal */}
+          <div className="flex-1 overflow-y-auto p-3 divide-y divide-slate-100">
+            {!searchQuery.trim() ? (
+              <div className="py-6 text-center text-slate-400 text-xs space-y-2">
+                <Sparkles className="w-6 h-6 mx-auto text-blue-500 opacity-60" />
+                <p>{language === 'so' ? 'Qor waxa aad raadinayso: magaca haanta, macmiilka, lambarka rasiidka, ama shaqaalaha.' : 'Type to search across tanks, sales, customers, and staff.'}</p>
+              </div>
+            ) : searchResults && searchResults.totalCount === 0 ? (
+              <div className="py-10 text-center text-slate-400 text-xs">
+                {language === 'so' ? 'Wax xog ah lagama helin raadintaada' : 'No results found matching your query'}
+              </div>
+            ) : (
+              searchResults && (
+                <>
+                  {/* Pages */}
+                  {searchResults.pages.length > 0 && (
+                    <div className="py-2">
+                      <div className="text-[10px] font-bold uppercase text-slate-400 px-1 mb-1">
+                        {language === 'so' ? 'Qaybaha Nidaamka' : 'Pages'}
+                      </div>
+                      {searchResults.pages.map(p => {
+                        const Icon = p.icon;
+                        return (
+                          <button
+                            key={p.id}
+                            onClick={() => handleSelectSearchResult(p.view)}
+                            className="w-full text-left p-2.5 rounded-xl hover:bg-blue-50 flex items-center gap-2.5 transition-colors cursor-pointer"
+                          >
+                            <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                              <Icon className="w-4 h-4" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="text-xs font-bold text-slate-900 truncate">{p.title}</div>
+                              <div className="text-[11px] text-slate-400 truncate">{p.subtitle}</div>
+                            </div>
+                            <ArrowRight className="w-4 h-4 text-slate-300" />
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Tanks */}
+                  {searchResults.tanks.length > 0 && (
+                    <div className="py-2">
+                      <div className="text-[10px] font-bold uppercase text-slate-400 px-1 mb-1">
+                        {language === 'so' ? 'Haamaha Shidaalka' : 'Tanks'}
+                      </div>
+                      {searchResults.tanks.map(t => {
+                        const pct = Math.round((t.currentLevel / t.capacity) * 100);
+                        return (
+                          <button
+                            key={t.id}
+                            onClick={() => handleSelectSearchResult('tanks')}
+                            className="w-full text-left p-2.5 rounded-xl hover:bg-emerald-50 flex items-center gap-2.5 transition-colors cursor-pointer"
+                          >
+                            <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                              <Database className="w-4 h-4" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="text-xs font-bold text-slate-900 truncate">
+                                {t.name} ({t.tankNumber}) — {t.fuelType}
+                              </div>
+                              <div className="text-[11px] text-slate-500">
+                                {t.currentLevel.toLocaleString()} L / {t.capacity.toLocaleString()} L
+                              </div>
+                            </div>
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
+                              {pct}%
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Customers */}
+                  {searchResults.customers.length > 0 && (
+                    <div className="py-2">
+                      <div className="text-[10px] font-bold uppercase text-slate-400 px-1 mb-1">
+                        {language === 'so' ? 'Macaamiisha & Deynta' : 'Customers'}
+                      </div>
+                      {searchResults.customers.map(c => (
+                        <button
+                          key={c.id}
+                          onClick={() => handleSelectSearchResult('customers')}
+                          className="w-full text-left p-2.5 rounded-xl hover:bg-amber-50 flex items-center gap-2.5 transition-colors cursor-pointer"
+                        >
+                          <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                            <Users className="w-4 h-4" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-xs font-bold text-slate-900 truncate">{c.name}</div>
+                            <div className="text-[11px] text-slate-500">{c.phone}</div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-xs font-bold text-slate-900">${c.currentBalance.toFixed(2)}</div>
+                            <div className="text-[9px] text-slate-400">{language === 'so' ? 'Deyn' : 'Debt'}</div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Sales */}
+                  {searchResults.sales.length > 0 && (
+                    <div className="py-2">
+                      <div className="text-[10px] font-bold uppercase text-slate-400 px-1 mb-1">
+                        {language === 'so' ? 'Iibkii ugu dambeeyay' : 'Sales'}
+                      </div>
+                      {searchResults.sales.map(s => (
+                        <button
+                          key={s.id}
+                          onClick={() => handleSelectSearchResult('sales', () => onSelectSaleReceipt?.(s))}
+                          className="w-full text-left p-2.5 rounded-xl hover:bg-blue-50 flex items-center gap-2.5 transition-colors cursor-pointer"
+                        >
+                          <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                            <Receipt className="w-4 h-4" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-xs font-bold text-slate-900 truncate">
+                              {s.saleNumber} — {s.fuelType} ({s.litres.toFixed(1)} L)
+                            </div>
+                            <div className="text-[11px] text-slate-500">{s.paymentMethod.toUpperCase()}</div>
+                          </div>
+                          <span className="text-xs font-black text-emerald-600">${s.totalAmount.toFixed(2)}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )
+            )}
+          </div>
+        </div>
       </div>
     )}
     </>

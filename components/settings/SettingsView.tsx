@@ -81,7 +81,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </h1>
           <p className="text-sm font-medium text-slate-500 mt-0.5">
             {language === 'so'
-              ? 'Xogta saldhigga, lacagta, kaydka JSON iyo dib-u-habeynta xogta.'
+              ? 'Xogta kaalinta, lacagta, kaydka JSON iyo dib-u-habeynta xogta.'
               : 'Station profile, tax rates, JSON disaster backups and database reset.'}
           </p>
         </div>

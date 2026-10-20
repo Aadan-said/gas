@@ -27,6 +27,7 @@ interface StaffViewProps {
   language: Language;
   onAddUser: (user: { name: string; username?: string; email: string; role: UserRole; pin: string }) => void;
   onToggleUserStatus: (userId: string) => void;
+  autoOpenForm?: boolean;
 }
 
 const ROLE_CONFIG: Record<UserRole, { label: string; labelSo: string; bg: string; text: string; border: string; desc: string; descSo: string }> = {
@@ -44,14 +45,21 @@ export const StaffView: React.FC<StaffViewProps> = ({
   currentUser,
   language,
   onAddUser,
-  onToggleUserStatus
+  onToggleUserStatus,
+  autoOpenForm = false
 }) => {
   const t = translations[language];
   const canManageStaff = currentUser.role === 'admin' || currentUser.role === 'manager';
 
   // Inline expand form (not modal)
-  const [formOpen, setFormOpen] = useState(false);
+  const [formOpen, setFormOpen] = useState(autoOpenForm);
   const formRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (autoOpenForm) {
+      setFormOpen(true);
+    }
+  }, [autoOpenForm]);
 
   const [name, setName]         = useState('');
   const [username, setUsername] = useState('');
@@ -138,7 +146,7 @@ export const StaffView: React.FC<StaffViewProps> = ({
           </h1>
           <p className="text-xs sm:text-sm font-medium text-slate-500 mt-0.5">
             {language === 'so'
-              ? 'Shaqaalaha saldhigga, doorarka amniga (RBAC) iyo maamulka PIN-ka.'
+              ? 'Shaqaalaha kaalinta, doorarka amniga (RBAC) iyo maamulka PIN-ka.'
               : 'Station staff accounts, role-based security (RBAC) and PIN management.'}
           </p>
         </div>

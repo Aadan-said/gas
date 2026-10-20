@@ -255,7 +255,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
 
               <div>
                 <label className="block font-bold text-slate-700 mb-1">
-                  {language === 'so' ? 'Laanta Saldhigga' : 'Station Branch'}
+                  {language === 'so' ? 'Laanta Kaalinta' : 'Station Branch'}
                 </label>
                 <input
                   type="text"

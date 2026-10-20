@@ -484,7 +484,7 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
                 <div className="mt-8 space-y-2">
                   <h3 className="text-2xl sm:text-3xl font-black text-white tracking-tight leading-tight">
                     {language === 'so'
-                      ? 'Maaree Saldhiggaaga Si Casri Ah'
+                      ? 'Maaree Kaalintaada Si Casri Ah'
                       : 'Next-Generation Petroleum Station Management'}
                   </h3>
                   <p className="text-xs sm:text-sm text-emerald-100/80 max-w-md leading-relaxed font-medium">
@@ -697,7 +697,7 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
                     disabled={isSubmitting}
                     className="w-full h-11 bg-[#007A55] hover:bg-[#006244] active:bg-[#005238] text-white font-bold rounded-xl shadow-md shadow-emerald-700/20 transition-all flex items-center justify-center gap-2 text-sm cursor-pointer disabled:opacity-50 mt-2"
                   >
-                    <span>{isSubmitting ? (language === 'so' ? 'Waa la hubinayaa...' : 'Verifying...') : (language === 'so' ? 'Gal Saldhigga' : 'Sign In')}</span>
+                    <span>{isSubmitting ? (language === 'so' ? 'Waa la hubinayaa...' : 'Verifying...') : (language === 'so' ? 'Gal Kaalinta' : 'Sign In')}</span>
                     <ArrowRight className="w-4 h-4" />
                   </button>
                 </form>
@@ -755,7 +755,7 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
                   </h3>
                   <p className="text-xs text-slate-500 mt-0.5">
                     {language === 'so'
-                      ? 'Diiwaangeli saldhiggaaga — xogtaadu waa kuu gaar, shaqaalaha iyo taleefannada ayaa isku xog arki doona'
+                      ? 'Diiwaangeli kaalintaada — xogtaadu waa kuu gaar, shaqaalaha iyo taleefannada ayaa isku xog arki doona'
                       : 'Register your station — your data stays private, and staff computers/phones share the same live records'}
                   </p>
                 </div>
@@ -1079,7 +1079,7 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({
                   }}
                   className="w-full h-11 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-md cursor-pointer"
                 >
-                  {language === 'so' ? 'Hadda Gal Saldhigga' : 'Sign In Now'}
+                  {language === 'so' ? 'Hadda Gal Kaalinta' : 'Sign In Now'}
                 </button>
               </div>
             )}

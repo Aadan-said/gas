@@ -110,7 +110,7 @@ export const FinanceView: React.FC<FinanceViewProps> = ({
           </h1>
           <p className="text-sm font-medium text-slate-500 mt-0.5">
             {language === 'so'
-              ? 'Diiwaanka kharashaadka saldhigga, dakhliga soo xarooday iyo xisaab-celinta khasnadda Gaalkacyo.'
+              ? 'Diiwaanka kharashaadka kaalinta, dakhliga soo xarooday iyo xisaab-celinta khasnadda Gaalkacyo.'
               : 'Station cash flow, operational overhead expenses, revenue and customer credit summaries.'}
           </p>
         </div>
