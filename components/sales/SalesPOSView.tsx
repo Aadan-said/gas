@@ -56,8 +56,9 @@ export const SalesPOSView: React.FC<SalesPOSViewProps> = ({
 }) => {
   const t = translations[language];
 
-  // POS State
-  const [selectedFuel, setSelectedFuel] = useState<FuelTypeCode>('PMS');
+  // Track selected tank ID dynamically from live state
+  const [selectedTankId, setSelectedTankId] = useState<string>(tanks[0]?.id || '');
+  const [selectedFuel, setSelectedFuel] = useState<FuelTypeCode>(tanks[0]?.fuelType || 'PMS');
   const [selectedPayment, setSelectedPayment] = useState<PaymentMethod>('sahal');
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
   const [quantityInput, setQuantityInput] = useState<string>('20');
@@ -65,24 +66,48 @@ export const SalesPOSView: React.FC<SalesPOSViewProps> = ({
   const [voidModalSale, setVoidModalSale] = useState<Sale | null>(null);
   const [voidReason, setVoidReason] = useState<string>('');
 
+  // Keep selected tank synced whenever tanks state changes
+  useEffect(() => {
+    if (tanks.length > 0) {
+      const exists = tanks.find(t => t.id === selectedTankId);
+      if (!exists) {
+        setSelectedTankId(tanks[0].id);
+        setSelectedFuel(tanks[0].fuelType);
+      }
+    }
+  }, [tanks, selectedTankId]);
+
   // Role-based data isolation: cashiers only see their own sales
   const visibleSales = currentUser.role === 'cashier'
     ? sales.filter(s => s.cashierId === currentUser.id)
     : sales;
 
-  // Find active tank from live state
-  const currentTank = tanks.find(t => t.fuelType === selectedFuel) || tanks[0];
-  const tankUnitPrice = currentTank ? currentTank.unitPrice : 1.15;
+  // Find active tank from live state (by selected ID or fuel type)
+  const currentTank = tanks.find(t => t.id === selectedTankId) ||
+    tanks.find(t => t.fuelType === selectedFuel) ||
+    tanks[0] || {
+      id: 't_default',
+      tankNumber: 'T-01',
+      fuelType: 'PMS' as FuelTypeCode,
+      name: 'Baasiin (PMS)',
+      capacity: 10000,
+      currentLevel: 5000,
+      unitPrice: 1.19,
+      minThreshold: 2000,
+      status: 'normal' as const
+    };
+
+  const tankUnitPrice = currentTank.unitPrice;
 
   // Custom editable selling price per unit ($/L or $/cylinder)
   const [customPrice, setCustomPrice] = useState<string>(tankUnitPrice.toFixed(2));
 
-  // Automatically update selling price when selected fuel or tank's live unit price changes
+  // Automatically update selling price when selected tank or tank's live unit price changes
   useEffect(() => {
     if (currentTank) {
       setCustomPrice(currentTank.unitPrice.toFixed(2));
     }
-  }, [selectedFuel, currentTank?.unitPrice]);
+  }, [currentTank.id, currentTank.unitPrice]);
 
   const activeUnitPrice = parseFloat(customPrice) > 0 ? parseFloat(customPrice) : tankUnitPrice;
 
@@ -116,8 +141,8 @@ export const SalesPOSView: React.FC<SalesPOSViewProps> = ({
     if (litres > currentTank.currentLevel) {
       alert(
         language === 'so'
-          ? `Haanta kuma filna! Waxaa ku haray ${currentTank.currentLevel} L.`
-          : `Insufficient tank stock! Remaining level is ${currentTank.currentLevel} L.`
+          ? `Haanta kuma filna! Waxaa ku haray ${currentTank.currentLevel.toLocaleString()} ${currentTank.fuelType === 'LPG' ? 'Dhululubo' : 'L'}.`
+          : `Insufficient tank stock! Remaining level is ${currentTank.currentLevel.toLocaleString()} ${currentTank.fuelType === 'LPG' ? 'Cyl' : 'L'}.`
       );
       return;
     }
@@ -138,7 +163,7 @@ export const SalesPOSView: React.FC<SalesPOSViewProps> = ({
     }
 
     onProcessSale({
-      fuelType: selectedFuel,
+      fuelType: currentTank.fuelType,
       tankId: currentTank.id,
       litres: parseFloat(litres.toFixed(2)),
       unitPrice: activeUnitPrice,
@@ -153,15 +178,11 @@ export const SalesPOSView: React.FC<SalesPOSViewProps> = ({
     setSelectedPayment('sahal');
   };
 
-  const isLPG = selectedFuel === 'LPG';
+  const isLPG = currentTank.fuelType === 'LPG';
   const effectiveUnit = isLPG ? (language === 'so' ? 'Dhululubo' : 'Cyl') : unit;
 
-  const fuelTypes: { code: FuelTypeCode; name: string; somaliName: string; price: number; color: string; unitLabel: string }[] = [
-    { code: 'PMS', name: language === 'so' ? 'Baasiin (PMS)' : 'Petrol (PMS)', somaliName: 'Baasiin', price: 1.19, color: 'emerald', unitLabel: '/L' },
-    { code: 'AGO', name: language === 'so' ? 'Naafto (AGO)' : 'Diesel (AGO)', somaliName: 'Naafto', price: 1.20, color: 'amber', unitLabel: '/L' },
-    { code: 'DPK', name: language === 'so' ? 'Gaas Cad (DPK)' : 'Kerosene (DPK)', somaliName: 'Gaas Cad', price: 0.94, color: 'blue', unitLabel: '/L' },
-    { code: 'LPG', name: language === 'so' ? 'Gaaska LPG (Dhululubo)' : 'LPG Gas (Cylinder)', somaliName: 'Gaaska LPG', price: 20.00, color: 'purple', unitLabel: language === 'so' ? '/Dhululubo' : '/Cyl' }
-  ];
+  // Build dynamic list of selectable fuels/tanks directly from station's live registered tanks
+  const availableTanks = tanks.length > 0 ? tanks : [currentTank];
 
   return (
     <div className="space-y-3 pb-8 sm:pb-6 max-w-7xl mx-auto">
@@ -268,17 +289,22 @@ export const SalesPOSView: React.FC<SalesPOSViewProps> = ({
               </span>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {fuelTypes.map(f => {
-                const tank = tanks.find(t => t.fuelType === f.code);
-                const isSelected = selectedFuel === f.code;
-                const liveTankPrice = tank ? tank.unitPrice : f.price;
-                const isLow = tank ? tank.currentLevel <= tank.minThreshold : false;
+              {availableTanks.map(tank => {
+                const isSelected = currentTank.id === tank.id;
+                const isLow = tank.currentLevel <= tank.minThreshold;
+                const isLpgTank = tank.fuelType === 'LPG';
+                const unitLabel = isLpgTank ? (language === 'so' ? '/Dhululubo' : '/Cyl') : '/L';
+                const unitStock = isLpgTank ? (language === 'so' ? 'Dhululubo' : 'Cyl') : 'L';
 
                 return (
                   <button
-                    key={f.code}
+                    key={tank.id}
                     type="button"
-                    onClick={() => setSelectedFuel(f.code)}
+                    onClick={() => {
+                      setSelectedTankId(tank.id);
+                      setSelectedFuel(tank.fuelType);
+                      setCustomPrice(tank.unitPrice.toFixed(2));
+                    }}
                     className={`p-3.5 rounded-2xl border text-left flex flex-col justify-between transition-all relative overflow-hidden cursor-pointer ${
                       isSelected
                         ? 'border-blue-600 bg-blue-50/50 shadow-md ring-2 ring-blue-600/20'
@@ -288,11 +314,11 @@ export const SalesPOSView: React.FC<SalesPOSViewProps> = ({
                     <div className="flex items-center justify-between mb-2">
                       <div
                         className={`w-8 h-8 rounded-xl flex items-center justify-center ${
-                          f.code === 'PMS'
+                          tank.fuelType === 'PMS'
                             ? 'bg-emerald-100 text-emerald-600'
-                            : f.code === 'AGO'
+                            : tank.fuelType === 'AGO'
                             ? 'bg-amber-100 text-amber-600'
-                            : f.code === 'DPK'
+                            : tank.fuelType === 'DPK'
                             ? 'bg-blue-100 text-blue-600'
                             : 'bg-purple-100 text-purple-600'
                         }`}
@@ -302,16 +328,23 @@ export const SalesPOSView: React.FC<SalesPOSViewProps> = ({
                       {isSelected ? (
                         <span className="w-2 h-2 rounded-full bg-blue-600 animate-ping" />
                       ) : isLow ? (
-                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-rose-100 text-rose-700">Hoos</span>
+                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-rose-100 text-rose-700">
+                          {language === 'so' ? 'Hoos' : 'Low'}
+                        </span>
                       ) : null}
                     </div>
                     <div>
-                      <div className="text-xs font-bold text-slate-800">{f.name}</div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-bold text-slate-800 truncate">{tank.name}</span>
+                        {tank.tankNumber && (
+                          <span className="text-[10px] font-mono text-slate-400">({tank.tankNumber})</span>
+                        )}
+                      </div>
                       <div className="text-sm font-black text-blue-600 mt-1">
-                        ${liveTankPrice.toFixed(2)}{f.unitLabel}
+                        ${tank.unitPrice.toFixed(2)}{unitLabel}
                       </div>
                       <div className="text-[10px] text-slate-500 font-medium mt-0.5">
-                        {language === 'so' ? 'Kaydka:' : 'Stock:'} <b className="text-slate-800">{tank ? tank.currentLevel.toLocaleString() : 0}</b> {f.code === 'LPG' ? (language === 'so' ? 'Dhululubo' : 'Cyl') : 'L'}
+                        {language === 'so' ? 'Kaydka:' : 'Stock:'} <b className="text-slate-800">{tank.currentLevel.toLocaleString()}</b> {unitStock}
                       </div>
                     </div>
                   </button>
@@ -489,7 +522,7 @@ export const SalesPOSView: React.FC<SalesPOSViewProps> = ({
                 ${totalAmount.toFixed(2)}
               </div>
               <span className="text-[11px] text-slate-400 font-medium block mt-1">
-                {language === 'so' ? 'Shidaalka ku haraya haanta:' : 'Tank Stock Remaining:'} {(currentTank.currentLevel - litres).toLocaleString()} {isLPG ? (language === 'so' ? 'Dhululubo' : 'Cyl') : 'L'}
+                {language === 'so' ? 'Shidaalka ku haraya haanta:' : 'Tank Stock Remaining:'} {Math.max(0, currentTank.currentLevel - litres).toLocaleString()} {isLPG ? (language === 'so' ? 'Dhululubo' : 'Cyl') : 'L'}
               </span>
             </div>
           </div>

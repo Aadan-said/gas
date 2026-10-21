@@ -124,7 +124,7 @@ export const GasFlowLogo: React.FC<GasFlowLogoProps> = ({
                 isDark ? 'text-white' : 'text-slate-900'
               }`}
             >
-              Gas<span className="text-blue-600 font-black">Flow</span>
+              GasFlow
             </span>
             {variant === 'full' && (
               <span

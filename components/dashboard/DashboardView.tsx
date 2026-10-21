@@ -7,6 +7,7 @@ import {
   Wallet,
   Receipt,
   ArrowUpRight,
+  ArrowDownRight,
   Fuel,
   Flame,
   Clock,
@@ -18,15 +19,22 @@ import {
   Calendar,
   Sparkles,
   Layers,
-  ArrowRight
+  ArrowRight,
+  Users,
+  CreditCard,
+  Scale
 } from 'lucide-react';
-import { Sale, Tank, User } from '@/lib/types';
+import { Sale, Tank, User, Customer, Expense, FuelDelivery, CustomerPayment } from '@/lib/types';
 import { translations, Language } from '@/lib/translations';
 
 interface DashboardViewProps {
   currentUser: User;
   sales: Sale[];
   tanks: Tank[];
+  customers?: Customer[];
+  expenses?: Expense[];
+  deliveries?: FuelDelivery[];
+  customerPayments?: CustomerPayment[];
   language: Language;
   onNavigate: (view: string) => void;
   onSelectSaleReceipt: (sale: Sale) => void;
@@ -53,6 +61,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   currentUser,
   sales,
   tanks,
+  customers = [],
+  expenses = [],
+  deliveries = [],
+  customerPayments = [],
   language,
   onNavigate,
   onSelectSaleReceipt
@@ -70,6 +82,24 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const totalLitresSold    = activeSales.reduce((a, c) => a + c.litres, 0);
   const cashSales          = activeSales.filter(s => s.paymentMethod === 'cash').reduce((a, c) => a + c.totalAmount, 0);
   const totalTransactions  = activeSales.length;
+
+  // Real Payment Method Breakdown
+  const sahalSales   = activeSales.filter(s => s.paymentMethod === 'sahal').reduce((a, c) => a + c.totalAmount, 0);
+  const evcSales     = activeSales.filter(s => s.paymentMethod === 'evc').reduce((a, c) => a + c.totalAmount, 0);
+  const edahabSales  = activeSales.filter(s => s.paymentMethod === 'edahab').reduce((a, c) => a + c.totalAmount, 0);
+  const creditSales  = activeSales.filter(s => s.paymentMethod === 'credit').reduce((a, c) => a + c.totalAmount, 0);
+  const cardSales    = activeSales.filter(s => s.paymentMethod === 'card').reduce((a, c) => a + c.totalAmount, 0);
+  const totalMobileMoney = sahalSales + evcSales + edahabSales;
+
+  // Real Customer Debts (Daymaha Macaamiisha)
+  const totalCustomerDebt = customers.reduce((sum, c) => sum + c.currentBalance, 0);
+  const activeDebtorsCount = customers.filter(c => c.currentBalance > 0).length;
+
+  // Real Station Expenses (Kharashaadka Kaalinta)
+  const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
+
+  // Net Operating Profit (Faa'iidada Saafiga ah = Dakhliga Iibka - Kharashaadka Baxay)
+  const netOperatingProfit = totalSalesAmount - totalExpenses;
 
   const roleConfig: Record<string, { label: string; color: string; bg: string }> = {
     admin:      { label: language === 'so' ? 'Maamule' : 'Administrator', color: '#2563EB', bg: '#EFF6FF' },
@@ -158,43 +188,47 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const dpkPct = totalFuelDistributed > 0 ? Math.round(((fuelLitresMap.DPK || 0) / totalFuelDistributed) * 100) : 0;
   const lpgPct = totalFuelDistributed > 0 ? Math.max(0, 100 - (pmsPct + agoPct + dpkPct)) : 0;
 
-  // KPI Cards matching CloseCRM & FlowAI
+  // Integrated Accounting KPI Cards connecting Sales, Customer Debts, Expenses & Net Profit
   const kpis = [
     {
       indicatorColor: '#2563EB',
       title: t.totalSalesToday,
       value: `$${totalSalesAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}`,
-      badge: '+12%',
+      badge: `${totalLitresSold.toFixed(0)} L`,
       badgePositive: true,
-      subtext: language === 'so' ? 'dakhliga maanta' : 'from yesterday',
-      icon: DollarSign
+      subtext: language === 'so' ? 'shidaalka la iibiyay' : 'fuel dispensed',
+      icon: DollarSign,
+      action: () => onNavigate('sales')
     },
     {
-      indicatorColor: '#10B981',
-      title: t.fuelSoldLitres,
-      value: `${totalLitresSold.toLocaleString('en-US', { minimumFractionDigits: 1 })} L`,
-      badge: '+8.4%',
-      badgePositive: true,
-      subtext: language === 'so' ? 'shidaalka la shubay' : 'volume pumped',
-      icon: Droplet
+      indicatorColor: '#D97706',
+      title: language === 'so' ? 'Deymaha Macaamiisha' : 'Customer Credit / Debts',
+      value: `$${totalCustomerDebt.toLocaleString('en-US', { minimumFractionDigits: 2 })}`,
+      badge: `${activeDebtorsCount} ${language === 'so' ? 'macmiil' : 'debtors'}`,
+      badgePositive: totalCustomerDebt === 0,
+      subtext: language === 'so' ? 'dayn furan oo la rabo' : 'receivables balance',
+      icon: Users,
+      action: () => onNavigate('customers')
     },
     {
-      indicatorColor: '#8B5CF6',
-      title: t.cashInHand,
-      value: `$${cashSales.toLocaleString('en-US', { minimumFractionDigits: 2 })}`,
-      badge: 'Cash',
-      badgePositive: true,
-      subtext: language === 'so' ? 'lacagta qasnada' : 'in register',
-      icon: Wallet
+      indicatorColor: '#DC2626',
+      title: language === 'so' ? 'Kharashaadka Kaalinta' : 'Station Expenses',
+      value: `$${totalExpenses.toLocaleString('en-US', { minimumFractionDigits: 2 })}`,
+      badge: `${expenses.length} ${language === 'so' ? 'jeer' : 'items'}`,
+      badgePositive: false,
+      subtext: language === 'so' ? 'kharashka guud ee baxay' : 'total operating expenses',
+      icon: Wallet,
+      action: () => onNavigate('finance')
     },
     {
-      indicatorColor: '#F59E0B',
-      title: t.totalTransactions,
-      value: `${totalTransactions}`,
-      badge: '+3 today',
-      badgePositive: true,
-      subtext: language === 'so' ? 'macaamiil la adeegay' : 'closed sales',
-      icon: Receipt
+      indicatorColor: netOperatingProfit >= 0 ? '#059669' : '#DC2626',
+      title: language === 'so' ? "Faa'iidada Saafiga ah" : 'Net Operating Profit',
+      value: `$${netOperatingProfit.toLocaleString('en-US', { minimumFractionDigits: 2 })}`,
+      badge: netOperatingProfit >= 0 ? '+Net' : '-Deficit',
+      badgePositive: netOperatingProfit >= 0,
+      subtext: language === 'so' ? 'dakhliga - kharashaadka' : 'revenue minus expenses',
+      icon: TrendingUp,
+      action: () => onNavigate('reports')
     }
   ];
 
@@ -242,7 +276,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         {kpis.map((kpi, idx) => (
           <div
             key={idx}
-            className="card card-hover p-4 sm:p-4.5 bg-white flex flex-col justify-between"
+            onClick={kpi.action}
+            className="card card-hover p-4 sm:p-4.5 bg-white flex flex-col justify-between cursor-pointer transition-all hover:border-slate-300"
           >
             <div>
               {/* Header with CloseCRM accent bar */}
@@ -266,8 +301,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
             {/* Subtitle / Trend Badge */}
             <div className="flex items-center gap-2 mt-3 pt-3 border-t border-[#F1F3F6]">
-              <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center gap-0.5">
-                <ArrowUpRight className="w-3 h-3" />
+              <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full flex items-center gap-0.5 ${
+                kpi.badgePositive
+                  ? 'bg-emerald-50 text-emerald-600 border border-emerald-100'
+                  : 'bg-rose-50 text-rose-600 border border-rose-100'
+              }`}>
+                {kpi.badgePositive ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
                 {kpi.badge}
               </span>
               <span className="text-[11.5px] text-slate-400 font-medium">
@@ -496,6 +535,189 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </div>
             ))}
           </div>
+        </div>
+      </div>
+
+      {/* 3.5. Integrated Accounting & Shift Balancing Dashboard Banner */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+        {/* 1. Khasnadda & Lacag-Qabashada (Till & Mobile Money Breakdown) */}
+        <div className="card p-4 sm:p-5 bg-white border border-[#ECEEF2] flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+                  <Wallet className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-bold text-slate-900">
+                    {language === 'so' ? 'Khasnadda & Shift-ka (Cash & E-Money)' : 'Till & Payment Methods'}
+                  </h3>
+                  <span className="text-[10px] text-slate-400">
+                    {language === 'so' ? 'Lacagaha gacanta ku jira & Mobile' : 'Real-time settlement balances'}
+                  </span>
+                </div>
+              </div>
+              <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-200">
+                {language === 'so' ? 'Toos u Xisaabsan' : 'Reconciled'}
+              </span>
+            </div>
+
+            <div className="space-y-2 mt-3 text-xs">
+              <div className="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-100">
+                <span className="text-slate-600 font-medium">💵 {language === 'so' ? 'Kaashka Khasnadda (Cash in Till):' : 'Cash in Drawer:'}</span>
+                <b className="font-bold text-slate-900">${cashSales.toFixed(2)}</b>
+              </div>
+              <div className="flex items-center justify-between p-2 rounded-xl bg-purple-50/60 border border-purple-100">
+                <span className="text-purple-800 font-medium">⚡ Golis Sahal:</span>
+                <b className="font-bold text-purple-900">${sahalSales.toFixed(2)}</b>
+              </div>
+              <div className="flex items-center justify-between p-2 rounded-xl bg-blue-50/60 border border-blue-100">
+                <span className="text-blue-800 font-medium">📱 Hormuud EVC Plus:</span>
+                <b className="font-bold text-blue-900">${evcSales.toFixed(2)}</b>
+              </div>
+              <div className="flex items-center justify-between p-2 rounded-xl bg-amber-50/60 border border-amber-100">
+                <span className="text-amber-800 font-medium">💳 Somtel eDahab:</span>
+                <b className="font-bold text-amber-900">${edahabSales.toFixed(2)}</b>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+            <span className="text-[11px] font-semibold text-slate-500">{language === 'so' ? 'Isku geynta lacagta soo xarootay:' : 'Total Collected:'}</span>
+            <span className="text-sm font-black text-emerald-600">${(cashSales + totalMobileMoney).toFixed(2)}</span>
+          </div>
+        </div>
+
+        {/* 2. Deymaha Macaamiisha & Gaadiidka (Customer Credit / Debts) */}
+        <div className="card p-4 sm:p-5 bg-white border border-[#ECEEF2] flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
+                  <Users className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-bold text-slate-900">
+                    {language === 'so' ? 'Deymaha Macaamiisha (Receivables)' : 'Customer Credit Ledger'}
+                  </h3>
+                  <span className="text-[10px] text-slate-400">
+                    {language === 'so' ? 'Gaadiidka & shirkadaha deynta qaatay' : 'Outstanding company fleet balances'}
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => onNavigate('customers')}
+                className="text-[10px] font-bold text-blue-600 hover:text-blue-700 cursor-pointer"
+              >
+                {t.viewAll} →
+              </button>
+            </div>
+
+            <div className="p-3 rounded-2xl bg-gradient-to-br from-amber-50/60 to-orange-50/40 border border-amber-100/80 mb-3">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-amber-700">
+                {language === 'so' ? 'Isku-geynta Deynta Furan:' : 'Total Outstanding Balance:'}
+              </div>
+              <div className="text-2xl font-black text-slate-900 mt-1">
+                ${totalCustomerDebt.toFixed(2)}
+              </div>
+              <div className="text-[11px] text-slate-500 mt-0.5">
+                {activeDebtorsCount} {language === 'so' ? 'macaamiil ayaa deyn ku socotaa' : 'active debtor accounts'}
+              </div>
+            </div>
+
+            {/* Quick list of top debt customers */}
+            <div className="space-y-1.5 text-xs">
+              {customers.filter(c => c.currentBalance > 0).slice(0, 2).map(c => (
+                <div key={c.id} className="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-100">
+                  <span className="font-semibold text-slate-800 truncate max-w-[140px]">{c.name}</span>
+                  <span className="font-bold text-amber-700">${c.currentBalance.toFixed(2)}</span>
+                </div>
+              ))}
+              {customers.filter(c => c.currentBalance > 0).length === 0 && (
+                <div className="text-center py-3 text-slate-400 text-xs">
+                  {language === 'so' ? 'Dhammaan macaamiishu deyn ma qabaan (0 Deyn)' : 'No outstanding customer balances'}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <button
+            onClick={() => onNavigate('customers')}
+            className="w-full mt-3 py-2 px-3 rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-bold transition-all cursor-pointer text-center"
+          >
+            {language === 'so' ? 'Maamul Macaamiisha & Deynta' : 'Manage Customers & Debts'}
+          </button>
+        </div>
+
+        {/* 3. Kharashaadka & Faa'iidada (Operating Expenses & Net Margin) */}
+        <div className="card p-4 sm:p-5 bg-white border border-[#ECEEF2] flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center font-bold">
+                  <Receipt className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-bold text-slate-900">
+                    {language === 'so' ? "Kharashka & Faa'iidada (P&L Summary)" : 'Expenses & Net Profit'}
+                  </h3>
+                  <span className="text-[10px] text-slate-400">
+                    {language === 'so' ? 'Xisaabinta dakhliga ka haray kharashka' : 'Net station operating financial health'}
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => onNavigate('finance')}
+                className="text-[10px] font-bold text-blue-600 hover:text-blue-700 cursor-pointer"
+              >
+                {t.viewAll} →
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 mb-3">
+              <div className="p-3 rounded-xl bg-rose-50/70 border border-rose-100">
+                <span className="text-[10px] font-bold uppercase text-rose-700 block">{language === 'so' ? 'Kharashka Baxay' : 'Total Expenses'}</span>
+                <span className="text-lg font-black text-slate-900">${totalExpenses.toFixed(2)}</span>
+                <span className="text-[10px] text-slate-400 block mt-0.5">{expenses.length} {language === 'so' ? 'qodob' : 'records'}</span>
+              </div>
+              <div className={`p-3 rounded-xl border ${netOperatingProfit >= 0 ? 'bg-emerald-50/70 border-emerald-100' : 'bg-rose-50/70 border-rose-100'}`}>
+                <span className={`text-[10px] font-bold uppercase block ${netOperatingProfit >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
+                  {language === 'so' ? "Faa'iidada Saafiga ah" : 'Net Margin'}
+                </span>
+                <span className={`text-lg font-black ${netOperatingProfit >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
+                  ${netOperatingProfit.toFixed(2)}
+                </span>
+                <span className="text-[10px] text-slate-400 block mt-0.5">
+                  {netOperatingProfit >= 0 ? (language === 'so' ? 'Faa\'iido furan' : 'In surplus') : (language === 'so' ? 'Khasaare ku jira' : 'In deficit')}
+                </span>
+              </div>
+            </div>
+
+            {/* Recent Expenses preview */}
+            <div className="space-y-1.5 text-xs">
+              {expenses.slice(0, 2).map(e => (
+                <div key={e.id} className="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-100">
+                  <div className="truncate max-w-[150px]">
+                    <span className="font-semibold text-slate-800 block truncate">{e.description}</span>
+                    <span className="text-[9px] text-slate-400">{e.category}</span>
+                  </div>
+                  <span className="font-bold text-rose-600">-${e.amount.toFixed(2)}</span>
+                </div>
+              ))}
+              {expenses.length === 0 && (
+                <div className="text-center py-3 text-slate-400 text-xs">
+                  {language === 'so' ? 'Wali wax kharash ah lama qorin' : 'No expenses recorded yet'}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <button
+            onClick={() => onNavigate('finance')}
+            className="w-full mt-3 py-2 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all cursor-pointer text-center"
+          >
+            {language === 'so' ? 'Diiwaangeli Kharash Cusub' : 'Add Station Expense'}
+          </button>
         </div>
       </div>
 
