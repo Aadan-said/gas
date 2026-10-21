@@ -75,6 +75,9 @@ interface Toast {
 
 export default function Home() {
   const [mounted, setMounted] = useState(false);
+  const [showSplash, setShowSplash] = useState(true);
+  const [splashStep, setSplashStep] = useState(0);
+  const [showLanding, setShowLanding] = useState(false);
   const [state, setState] = useState<AppState>(getInitialState);
 
   // UI state
@@ -255,6 +258,23 @@ export default function Home() {
     return false;
   }, [applyServerState]);
 
+  // Animated splash: cycle through steps 0→3 then dismiss
+  useEffect(() => {
+    const steps = [300, 700, 600, 500]; // ms for each step to show
+    let step = 0;
+    const advance = () => {
+      step++;
+      setSplashStep(step);
+      if (step < steps.length) {
+        setTimeout(advance, steps[step]);
+      } else {
+        // After all steps, wait a beat then dismiss
+        setTimeout(() => setShowSplash(false), 400);
+      }
+    };
+    setTimeout(advance, steps[0]);
+  }, []);
+
   // Restore session, then keep this device in sync with the station server
   useEffect(() => {
     setMounted(true);
@@ -269,6 +289,11 @@ export default function Home() {
       } else {
         setIsAuthenticated(false);
         setState(emptyAppState());
+        // Show landing page for fresh (unauthenticated) visitors
+        const hasVisited = typeof window !== 'undefined' && sessionStorage.getItem('gf_visited');
+        if (!hasVisited) {
+          setShowLanding(true);
+        }
       }
     }).catch(() => {
       setIsAuthenticated(false);
@@ -712,21 +737,245 @@ export default function Home() {
     });
   };
 
-  if (!mounted) {
+  // ── Animated Splash Screen ─────────────────────────────
+  if (!mounted || showSplash) {
+    const bootSteps = [
+      { label: 'Initializing station system...', done: splashStep > 0 },
+      { label: 'Loading fuel & tank telemetry...', done: splashStep > 1 },
+      { label: 'Connecting to cloud database...', done: splashStep > 2 },
+      { label: 'Ready', done: splashStep > 3 },
+    ];
     return (
-      <div className="min-h-screen bg-[#F4F6FA] flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/25">
-            <svg className="w-8 h-8 text-white animate-spin" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-            </svg>
+      <div
+        className="min-h-screen flex items-center justify-center"
+        style={{
+          background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 45%, #0F2A5A 100%)'
+        }}
+      >
+        {/* Ambient glow circles */}
+        <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
+          <div style={{
+            position: 'absolute', width: 520, height: 520,
+            borderRadius: '50%', top: '-120px', left: '-160px',
+            background: 'radial-gradient(circle, rgba(37,99,235,0.18) 0%, transparent 70%)'
+          }} />
+          <div style={{
+            position: 'absolute', width: 400, height: 400,
+            borderRadius: '50%', bottom: '-80px', right: '-100px',
+            background: 'radial-gradient(circle, rgba(99,102,241,0.14) 0%, transparent 70%)'
+          }} />
+        </div>
+
+        <div style={{ position: 'relative', zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 32 }}>
+          {/* Logo mark */}
+          <div style={{ position: 'relative' }}>
+            <div style={{
+              width: 80, height: 80, borderRadius: 22,
+              background: 'linear-gradient(135deg, #2563EB 0%, #4F46E5 100%)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 0 0 1px rgba(255,255,255,0.08), 0 24px 48px rgba(37,99,235,0.45)'
+            }}>
+              <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
+                <path d="M22 6C22 6 8 14 8 26C8 34 14.5 40 22 40C29.5 40 36 34 36 26C36 14 22 6 22 6Z" fill="rgba(255,255,255,0.15)" stroke="rgba(255,255,255,0.5)" strokeWidth="1.5"/>
+                <path d="M22 13C22 13 13 19 13 27C13 32 17 36 22 36C27 36 31 32 31 27C31 19 22 13 22 13Z" fill="rgba(255,255,255,0.25)"/>
+                <circle cx="22" cy="27" r="5" fill="white" opacity="0.9"/>
+              </svg>
+            </div>
+            {/* Pulsing ring */}
+            <div style={{
+              position: 'absolute', inset: -8, borderRadius: 30,
+              border: '1.5px solid rgba(37,99,235,0.4)',
+              animation: 'splashPulse 2s ease-in-out infinite'
+            }} />
           </div>
-          <div className="text-center">
-            <div className="text-lg font-bold text-slate-900">GasFlow</div>
-            <div className="text-xs text-slate-500 mt-0.5">Initializing station system...</div>
+
+          {/* Brand name */}
+          <div style={{ textAlign: 'center' }}>
+            <div style={{
+              fontSize: 32, fontWeight: 800, letterSpacing: '-0.04em',
+              color: '#FFFFFF', lineHeight: 1.1,
+              textShadow: '0 2px 20px rgba(37,99,235,0.5)'
+            }}>GasFlow</div>
+            <div style={{
+              fontSize: 12, fontWeight: 500, letterSpacing: '0.18em',
+              textTransform: 'uppercase', color: 'rgba(148,163,184,0.9)',
+              marginTop: 6
+            }}>Petroleum Station System</div>
+          </div>
+
+          {/* Boot steps */}
+          <div style={{
+            display: 'flex', flexDirection: 'column', gap: 10,
+            minWidth: 260, padding: '20px 24px',
+            background: 'rgba(255,255,255,0.04)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: 16,
+            backdropFilter: 'blur(12px)'
+          }}>
+            {bootSteps.map((step, i) => (
+              <div key={i} style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                opacity: i <= splashStep ? 1 : 0.25,
+                transition: 'opacity 0.4s ease'
+              }}>
+                <div style={{
+                  width: 18, height: 18, borderRadius: '50%', flexShrink: 0,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: step.done ? 'rgba(16,185,129,0.2)' : (i === splashStep ? 'rgba(37,99,235,0.3)' : 'rgba(255,255,255,0.06)'),
+                  border: step.done ? '1px solid rgba(16,185,129,0.5)' : (i === splashStep ? '1px solid rgba(37,99,235,0.6)' : '1px solid rgba(255,255,255,0.1)')
+                }}>
+                  {step.done ? (
+                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                      <path d="M2 5l2.5 2.5L8 3" stroke="#10B981" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  ) : i === splashStep ? (
+                    <div style={{
+                      width: 6, height: 6, borderRadius: '50%',
+                      background: '#3B82F6',
+                      animation: 'splashBlink 0.8s ease-in-out infinite'
+                    }} />
+                  ) : (
+                    <div style={{ width: 5, height: 5, borderRadius: '50%', background: 'rgba(255,255,255,0.2)' }} />
+                  )}
+                </div>
+                <span style={{
+                  fontSize: 12, fontWeight: 500,
+                  color: step.done ? 'rgba(52,211,153,0.95)' : (i === splashStep ? 'rgba(255,255,255,0.9)' : 'rgba(148,163,184,0.6)')
+                }}>{step.label}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Subtle version */}
+          <div style={{ fontSize: 11, color: 'rgba(100,116,139,0.7)', letterSpacing: '0.05em' }}>v2.4 · gasflow.so</div>
+        </div>
+
+        <style>{`
+          @keyframes splashPulse {
+            0%, 100% { opacity: 0.4; transform: scale(1); }
+            50% { opacity: 0.9; transform: scale(1.06); }
+          }
+          @keyframes splashBlink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+          }
+        `}</style>
+      </div>
+    );
+  }
+
+  // ── Landing Page (first visit, unauthenticated) ──────────────────────────
+  if (showLanding && !isAuthenticated) {
+    const features = [
+      { icon: '⛽', title: 'Live POS Sales', desc: 'Fuel dispensing with EVC, Sahal & cash payments. Auto-receipts.' },
+      { icon: '🏗️', title: 'Tank Telemetry', desc: 'Real-time dipstick calibration, delivery tracking & stock reconciliation.' },
+      { icon: '📊', title: 'Financial Analytics', desc: 'Daily P&L, expense ledger, customer debt management & shift reports.' },
+      { icon: '☁️', title: 'Cloud Multi-Device', desc: 'Every POS device syncs instantly — works offline, never loses data.' },
+      { icon: '🔐', title: 'Role-Based Security', desc: 'Admin, Manager, Cashier & Accountant roles with individual audit trails.' },
+      { icon: '🛡️', title: 'Developer Control', desc: 'Remote license management & kill-switch for subscription enforcement.' },
+    ];
+    return (
+      <div style={{ minHeight: '100vh', background: 'linear-gradient(160deg, #0F172A 0%, #1E293B 55%, #0F2A5A 100%)', fontFamily: 'var(--font-sans, system-ui, sans-serif)' }}>
+        {/* Nav */}
+        <nav style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 40px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: 'linear-gradient(135deg, #2563EB, #4F46E5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg width="20" height="20" viewBox="0 0 44 44" fill="none"><path d="M22 6C22 6 8 14 8 26C8 34 14.5 40 22 40C29.5 40 36 34 36 26C36 14 22 6 22 6Z" fill="rgba(255,255,255,0.2)" stroke="white" strokeWidth="1.5"/><circle cx="22" cy="27" r="5" fill="white" opacity="0.9"/></svg>
+            </div>
+            <span style={{ fontSize: 18, fontWeight: 800, color: '#fff', letterSpacing: '-0.03em' }}>GasFlow</span>
+          </div>
+          <button
+            onClick={() => {
+              if (typeof window !== 'undefined') sessionStorage.setItem('gf_visited', '1');
+              setShowLanding(false);
+            }}
+            style={{
+              padding: '9px 22px', borderRadius: 10, border: 'none', cursor: 'pointer',
+              background: 'linear-gradient(135deg, #2563EB, #4F46E5)',
+              color: '#fff', fontSize: 13, fontWeight: 700, letterSpacing: '-0.01em',
+              boxShadow: '0 4px 16px rgba(37,99,235,0.4)'
+            }}
+          >
+            {language === 'so' ? 'Gal Nidaamka →' : 'Sign In →'}
+          </button>
+        </nav>
+
+        {/* Hero */}
+        <div style={{ textAlign: 'center', padding: '80px 24px 60px', position: 'relative' }}>
+          {/* Glow */}
+          <div style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', width: 600, height: 300, borderRadius: '50%', background: 'radial-gradient(ellipse, rgba(37,99,235,0.2) 0%, transparent 70%)', pointerEvents: 'none' }} />
+          <div style={{ position: 'relative', zIndex: 1 }}>
+            <div style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              padding: '5px 14px', borderRadius: 99,
+              background: 'rgba(37,99,235,0.15)', border: '1px solid rgba(37,99,235,0.3)',
+              fontSize: 11, fontWeight: 600, color: '#93C5FD', letterSpacing: '0.08em',
+              textTransform: 'uppercase', marginBottom: 28
+            }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#3B82F6', display: 'inline-block', animation: 'splashBlink 1.2s ease-in-out infinite' }} />
+              Cloud Online · gasflow.so
+            </div>
+            <h1 style={{ fontSize: 'clamp(36px, 6vw, 72px)', fontWeight: 900, letterSpacing: '-0.04em', color: '#fff', lineHeight: 1.05, margin: '0 auto 24px', maxWidth: 800 }}>
+              The Complete Station<br />
+              <span style={{ background: 'linear-gradient(90deg, #60A5FA, #818CF8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                Operating System
+              </span>
+            </h1>
+            <p style={{ fontSize: 17, color: 'rgba(148,163,184,0.9)', maxWidth: 520, margin: '0 auto 44px', lineHeight: 1.7 }}>
+              {language === 'so'
+                ? 'Nidaamka kormeerka dhuumaha — iibka, haamaha, maaliyadda, shaqaalaha, iyo warbixinnada — hal meel oo sahlan.'
+                : 'Fuel sales, tank telemetry, finance, staff & reports — all in one beautifully simple system.'}
+            </p>
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+              <button
+                onClick={() => {
+                  if (typeof window !== 'undefined') sessionStorage.setItem('gf_visited', '1');
+                  setShowLanding(false);
+                  setAuthInitialMode('login');
+                }}
+                style={{
+                  padding: '13px 32px', borderRadius: 12, border: 'none', cursor: 'pointer',
+                  background: 'linear-gradient(135deg, #2563EB, #4F46E5)',
+                  color: '#fff', fontSize: 15, fontWeight: 700, letterSpacing: '-0.01em',
+                  boxShadow: '0 8px 24px rgba(37,99,235,0.45)'
+                }}
+              >
+                {language === 'so' ? '🚀 Bilow — Gal' : '🚀 Get Started — Sign In'}
+              </button>
+            </div>
           </div>
         </div>
+
+        {/* Features Grid */}
+        <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 24px 80px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
+            {features.map((f, i) => (
+              <div key={i} style={{
+                padding: '24px', borderRadius: 16,
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                backdropFilter: 'blur(12px)',
+                transition: 'border-color 0.2s, background 0.2s'
+              }}>
+                <div style={{ fontSize: 28, marginBottom: 12 }}>{f.icon}</div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: '#fff', marginBottom: 6 }}>{f.title}</div>
+                <div style={{ fontSize: 13, color: 'rgba(148,163,184,0.8)', lineHeight: 1.6 }}>{f.desc}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div style={{ textAlign: 'center', padding: '24px', borderTop: '1px solid rgba(255,255,255,0.06)', color: 'rgba(100,116,139,0.7)', fontSize: 12 }}>
+          GasFlow v2.4 · Petroleum Station Management System · gasflow.so
+        </div>
+
+        <style>{`
+          @keyframes splashBlink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+          }
+        `}</style>
       </div>
     );
   }
